@@ -1,0 +1,12 @@
+# @package _global_
+environment:
+  name: "prod"
+  
+# Продакшен настройки
+trainer:
+  max_epochs: 10
+  accelerator: gpu
+  precision: 16-mixed
+
+api:
+  log_level: INFO

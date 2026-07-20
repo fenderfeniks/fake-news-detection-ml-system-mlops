@@ -1,0 +1,5 @@
+_target_: src.core.data.fetcher.RawDataFetcher
+source_type: "local_csv"
+raw_dir: "${paths.data_dir}/raw"
+file_name: "company_dialogues.csv"
+sep: ";"  # Прокинется в **kwargs и уйдет в load_dataset
