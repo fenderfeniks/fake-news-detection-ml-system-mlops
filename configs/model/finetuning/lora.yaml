@@ -1,0 +1,11 @@
+# @package model.finetuning
+# configs/model/finetuning/lora.yaml
+type: "peft"
+peft_config:
+  _target_: peft.LoraConfig
+  r: 8
+  lora_alpha: 16
+  target_modules: ["query", "value"] 
+  lora_dropout: 0.1
+  bias: "none"
+  task_type: "SEQ_CLS"

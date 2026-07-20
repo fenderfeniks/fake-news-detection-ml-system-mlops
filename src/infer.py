@@ -24,8 +24,15 @@ def infer(cfg: DictConfig) -> None:
     logger.info("Загрузка токенизатора...")
     tokenizer = hydra.utils.instantiate(cfg.model.tokenizer).build()
 
-    logger.info(f"Загрузка базовой модели: {cfg.model.builder.model_name_or_path}")
-    model = hydra.utils.instantiate(cfg.model.builder, tokenizer=tokenizer).build()
+    model_builder = hydra.utils.instantiate(cfg.model.builder, tokenizer=tokenizer)
+    model = model_builder.build()
+    if getattr(model_builder, "loaded_from_mlflow", False):
+        logger.info(
+            f"Модель загружена из MLflow Production "
+            f"('{cfg.model.builder.mlflow_model_name}@{cfg.model.builder.mlflow_model_alias}')"
+        )
+    else:
+        logger.info(f"Модель загружена с базового пути: {cfg.model.builder.model_name_or_path}")
 
     ckpt_path = cfg.get("ckpt_path")
     if ckpt_path:

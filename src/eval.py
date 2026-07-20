@@ -10,6 +10,7 @@ import hydra  # noqa: E402
 from omegaconf import DictConfig  # noqa: E402
 
 from src.utils.hydra_utils import setup_config  # noqa: E402
+from src.utils.torch_utils import register_safe_globals  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ def evaluate(cfg: DictConfig) -> None:
 
     if ckpt_path:
         logger.info(f"Загрузка PL чекпоинта из: {ckpt_path}")
+        register_safe_globals()
     else:
         logger.warning("Путь к чекпоинту не передан. Запуск оценки на случайных весах.")
 

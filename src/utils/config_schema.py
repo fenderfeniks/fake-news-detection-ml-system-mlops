@@ -69,7 +69,20 @@ class ModelBuilderConfig:
     auto_model_class: str
     torch_dtype: str
     num_labels: int
+    finetuning_type: str
     quantization_config: Any | None = None
+    peft_config: Any | None = None
+
+    # --- НАСТРОЙКИ MLFLOW REGISTRY ---
+    use_mlflow_registry: bool = False
+    mlflow_tracking_uri: str | None = None
+    mlflow_model_name: str | None = None
+    mlflow_model_alias: str | None = None
+
+
+@dataclass
+class FinetuningConfig:
+    type: str
     peft_config: Any | None = None
 
 
@@ -77,6 +90,7 @@ class ModelBuilderConfig:
 class ModelConfig:
     tokenizer: TokenizerConfig
     builder: ModelBuilderConfig
+    finetuning: FinetuningConfig
     model_name: str | None = None
 
 

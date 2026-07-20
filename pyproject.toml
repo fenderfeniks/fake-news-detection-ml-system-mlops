@@ -20,10 +20,20 @@ dependencies = [
     "pydantic>=2.6.0",
     "python-dotenv>=1.0.0",
     "accelerate>=0.27.0",
-    "python-json-logger>=2.0.0"
+    "python-json-logger>=2.0.0",
+    "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
+
+# ==========================================
+# ГРУППА 0: INFERENCE-CORE (минимум для запуска модели из MLflow)
+# Именно эта группа экспортируется как requirements для артефакта модели.
+# ==========================================
+inference-core = [
+    "torch>=2.0.0",
+    "transformers>=4.38.0",
+]
 
 # ==========================================
 # ГРУППА 1: ОБУЧЕНИЕ (Training)

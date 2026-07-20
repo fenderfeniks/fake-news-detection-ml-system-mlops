@@ -1,0 +1,4 @@
+# @package model.finetuning
+# configs/model/finetuning/head_only.yaml
+type: "head_only"
+peft_config: null

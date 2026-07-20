@@ -1,0 +1,4 @@
+# @package model.finetuning
+# configs/model/finetuning/full.yaml
+type: "full"
+peft_config: null

@@ -39,8 +39,8 @@ collator:
 dataloader:
   _target_: torch.utils.data.DataLoader
   batch_size: 16
-  num_workers: 4
-  pin_memory: True
+  num_workers: 0
+  pin_memory: False
 
 # --- 5. Сам DataModule ---
 datamodule:

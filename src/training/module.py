@@ -76,7 +76,10 @@ class NLPModel(pl.LightningModule):
         self.log_dict(self.test_metrics, on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
-        optimizer = self.optimizer_cfg(params=self.model.parameters())
+        trainable_params = [p for p in self.model.parameters() if p.requires_grad]
+
+        optimizer = self.optimizer_cfg(params=trainable_params)
+
         if self.scheduler_cfg is None:
             return optimizer
 

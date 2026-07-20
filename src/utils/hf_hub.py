@@ -16,7 +16,7 @@ def download_hf_artifact(
     logger.info(f"Подготовка к скачиванию {filename} из репозитория {repo_id}...")
     os.makedirs(local_dir, exist_ok=True)
 
-    auth_token = token or os.getenv("HUGGINGFACE_TOKEN")
+    auth_token = token or os.getenv("HF_TOKEN")
 
     try:
         # ИСПРАВЛЕНИЕ: Умная проверка на директорию
@@ -51,7 +51,7 @@ def upload_hf_artifact(
     """
     logger.info(f"Подготовка к загрузке {local_file_path} в репозиторий {repo_id}...")
 
-    auth_token = token or os.getenv("HUGGINGFACE_TOKEN")
+    auth_token = token or os.getenv("HF_TOKEN")
     if not auth_token:
         raise ValueError("Для загрузки артефактов требуется HUGGINGFACE_TOKEN с правами 'Write'.")
 

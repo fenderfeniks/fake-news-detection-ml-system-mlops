@@ -61,8 +61,23 @@ class NLPPipeline:
         model_builder = instantiate(self.cfg.model.builder, tokenizer=self.tokenizer)
         self.model = model_builder.build()
 
-        # 3. Загрузка кастомных весов
+        # Builder сам решает, откуда взять веса: если в конфиге
+        # model.builder.use_mlflow_registry: True — модель уже пришла
+        # из MLflow Model Registry (Production-версия), и в общем случае
+        # это финальные веса, поверх которых ничего накатывать не нужно.
+        loaded_from_mlflow = getattr(model_builder, "loaded_from_mlflow", False)
+
+        # 3. Загрузка кастомных весов (доп. LoRA/чекпоинт поверх базы).
+        # Явно переданный checkpoint_path — это осознанный выбор вызывающего
+        # кода, поэтому применяем его даже поверх MLflow-весов, если он
+        # передан; это позволяет, например, тестировать новый LoRA-адаптер
+        # поверх текущей Production-модели без переобучения с нуля.
         if checkpoint_path:
+            if loaded_from_mlflow:
+                logger.info(
+                    "Модель загружена из MLflow Production, но также передан "
+                    "checkpoint_path — накатываем его поверх Production-весов."
+                )
             if hf_repo_id and not os.path.exists(checkpoint_path):
                 checkpoint_path = download_hf_artifact(
                     repo_id=hf_repo_id, filename=checkpoint_path, local_dir="./models/downloaded"
