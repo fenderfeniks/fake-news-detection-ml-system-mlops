@@ -34,9 +34,14 @@ class NLPModel(pl.LightningModule):
         self.val_metrics = metrics.clone(prefix="val_")
         self.test_metrics = metrics.clone(prefix="test_")
 
-    def forward(self, input_ids, attention_mask, labels=None):
-        # AutoModelForSequenceClassification вернет SequenceClassifierOutput
-        return self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+    def forward(self, input_ids, attention_mask, labels=None, **kwargs):
+        # **kwargs перехватит token_type_ids и любые другие специфичные тензоры
+        return self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            labels=labels,
+            **kwargs,  # Пробрасываем их прямо в модель HF
+        )
 
     def training_step(self, batch, batch_idx):
         outputs = self(**batch)

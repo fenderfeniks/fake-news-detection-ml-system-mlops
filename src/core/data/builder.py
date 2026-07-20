@@ -17,7 +17,7 @@ from typing import Any, Optional
 import pytorch_lightning as pl
 from omegaconf import OmegaConf
 from hydra.utils import instantiate
-from datasets import load_from_disk, DatasetDict
+from datasets import load_from_disk, DatasetDict, ClassLabel
 from transformers import PreTrainedTokenizerBase
 
 from src.core.data.datasets import NLPDatasetAdapter
@@ -74,7 +74,9 @@ class NLPDataModule(pl.LightningDataModule):
             raw_val = raw_datasets["validation"]
             raw_test = raw_datasets["test"]
         else:
-            
+            raw_datasets["train"] = raw_datasets["train"].cast_column(
+                "label", ClassLabel(names=[0, 1])
+            )
             stratify_col = self.data_cfg.get("stratify_column", None)
             # Fallback: Если сплитов нет, делаем их искусственно из train
             split_ds = raw_datasets["train"].train_test_split(
@@ -124,7 +126,7 @@ class NLPDataModule(pl.LightningDataModule):
             self.train_dataset = processed_dataset["train"]
             self.val_dataset = processed_dataset["validation"]
         
-        if stage == "validate" or stage in None:
+        if stage == "validate" or stage is None:
             self.val_dataset = processed_dataset["validation"]
 
         if stage == "test" or stage is None:
