@@ -3,7 +3,7 @@ environment:
   name: "local"
 # Для локальной разработки урезаем аппетиты трейнера
 trainer:
-  max_epochs: 2
+  max_epochs: 1
   accelerator: auto # Автоматический выбор CPU/MPS/GPU
   precision: 32
 

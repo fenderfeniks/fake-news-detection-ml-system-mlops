@@ -4,7 +4,7 @@ model_name: "DeepPavlov/rubert-base-cased"
 is_causal_lm: False
 
 builder:
-  auto_model_class: "transformers.AutoModelForSequenceClassification"
+  auto_model_class: "transformers.AutoModel"
   torch_dtype: "float32"
 
 loss_fn:

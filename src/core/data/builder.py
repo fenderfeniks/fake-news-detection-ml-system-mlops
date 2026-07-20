@@ -116,7 +116,10 @@ class NLPDataModule(pl.LightningDataModule):
         if stage == "fit" or stage is None:
             self.train_dataset = processed_dataset["train"]
             self.val_dataset = processed_dataset["validation"]
-            
+        
+        if stage == "validate" or stage in None:
+            self.val_dataset = processed_dataset["validation"]
+
         if stage == "test" or stage is None:
             self.test_dataset = processed_dataset["test"]
 

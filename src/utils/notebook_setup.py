@@ -10,27 +10,35 @@ from hydra.core.global_hydra import GlobalHydra
 def init_nlp_notebook(config_name: str = "main"):
     """
     Инициализирует окружение для NLP ноутбука.
-    Настраивает пути, логирование и загружает конфиг Hydra.
     """
-    # 1. Находим корень проекта (путь до файла -> родитель -> родитель -> корень)
-    project_root = Path(__file__).resolve().parents[2]
+    # 1. Находим корень проекта: ищем папку, где лежит 'pyproject.toml' или 'src'
+    # Берем текущую рабочую директорию (обычно это корень проекта при запуске VS Code)
+    project_root = Path.cwd()
 
-    # 2. Устанавливаем рабочую директорию
-    if os.getcwd() != str(project_root):
-        os.chdir(project_root)
-        print(f"Working directory set to: {os.getcwd()}")
+    # Если мы глубоко в ноутбуках, поднимаемся на один уровень вверх (на всякий случай)
+    if project_root.name == "notebooks":
+        project_root = project_root.parent
 
-    # 3. Добавляем корень в sys.path, чтобы работали импорты 'from src...'
+    # 2. Добавляем корень в sys.path
     if str(project_root) not in sys.path:
         sys.path.append(str(project_root))
 
-    # 4. Инициализация Hydra
+    # 3. Инициализация Hydra
     GlobalHydra.instance().clear()
-    initialize(config_path="../../configs", version_base="1.3")
+
+    # Важно: config_path должен быть относительным от ЭТОГО файла
+    # Если этот файл в src/utils, то configs лежат в ../../configs
+    try:
+        initialize(config_path="../../configs", version_base="1.3")
+    except ValueError:
+        # Если инициализация уже была, очищаем и пробуем снова
+        GlobalHydra.instance().clear()
+        initialize(config_path="../../configs", version_base="1.3")
+
     cfg = compose(config_name=config_name)
 
-    # Настройка логгера для ноутбука (чтобы видеть логи библиотек)
-    logging.basicConfig(level=logging.INFO)
+    # 4. Настройка логирования
+    logging.basicConfig(level=logging.INFO, force=True)
 
-    print(f"NLP Environment ready. Config loaded: {config_name}")
+    print(f"NLP Environment ready. Root: {project_root}")
     return cfg
