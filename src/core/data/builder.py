@@ -74,15 +74,22 @@ class NLPDataModule(pl.LightningDataModule):
             raw_val = raw_datasets["validation"]
             raw_test = raw_datasets["test"]
         else:
+            
+            stratify_col = self.data_cfg.get("stratify_column", None)
             # Fallback: Если сплитов нет, делаем их искусственно из train
             split_ds = raw_datasets["train"].train_test_split(
                 test_size=self.data_cfg.val_split_size * 2, # Берем x2, чтобы поделить на val и test
-                seed=self.data_cfg.seed
+                seed=self.data_cfg.seed,
+                stratify_by_column=stratify_col
             )
             raw_train = split_ds["train"]
             
             # Делим отщипнутый кусок пополам между val и test
-            val_test_split = split_ds["test"].train_test_split(test_size=0.5, seed=self.data_cfg.seed)
+            val_test_split = split_ds["test"].train_test_split(
+                test_size=0.5,
+                seed=self.data_cfg.seed,
+                stratify_by_column=stratify_col
+            )
             raw_val = val_test_split["train"]
             raw_test = val_test_split["test"]
 

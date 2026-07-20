@@ -19,6 +19,7 @@ from src.utils.hydra_utils import setup_config  # noqa: E402
 # Настройка логгера для текущего файла
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("huggingface_hub").setLevel(logging.WARNING)
 
 
 @hydra.main(config_path="../configs", config_name="main", version_base="1.3")

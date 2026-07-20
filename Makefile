@@ -4,7 +4,6 @@
 # ==========================================
 .PHONY: help install api train airflow down clean
 
-# Команда по умолчанию
 help:
 	@echo "Доступные команды:"
 	@echo "  make install   - Установить зависимости локально через uv"
@@ -14,15 +13,13 @@ help:
 	@echo "  make down      - Остановить все Docker контейнеры"
 	@echo "  make clean     - Очистить кэш, логи и временные файлы"
 
-# --- Локальная настройка ---
+# Убрали rag из extras
 install:
 	uv venv
-	uv pip install -e ".[dev,training,rag,api]"
+	uv pip install -e ".[dev,training,api]"
 
-# --- Запуск Docker контейнеров ---
 api:
 	@echo "🚀 Запуск API..."
-	# ИСПРАВЛЕНИЕ: Удален вызов несуществующего сервиса qdrant
 	docker compose up -d --build api
 
 train:
@@ -37,7 +34,6 @@ down:
 	@echo "🛑 Остановка всех сервисов..."
 	docker compose down
 
-# --- Утилиты ---
 clean:
 	@echo "🧹 Очистка временных файлов и кэша..."
 	find . -type d -name "__pycache__" -exec rm -rf {} +

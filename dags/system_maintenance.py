@@ -10,9 +10,7 @@ from kubernetes.client import models as k8s
 
 
 # ИНФРАСТРУКТУРА
-IMAGE = Variable.get(
-    "PROJECT_IMAGE", default_var="my-company/industrial_nlp_template:trainer-latest"
-)
+IMAGE = Variable.get("PROJECT_IMAGE", default_var="my-company/fake_news_detector:trainer-latest")
 NAMESPACE = Variable.get("K8S_NAMESPACE", default_var="ml-pipelines")
 
 # Защитный словарь
@@ -20,8 +18,8 @@ DEFAULT_CONFIG = {
     "schedule": "@daily",
     "default_args": {"owner": "mlops", "retries": 1, "retry_delay_minutes": 5},
     "resources": {"requests": {"cpu": "0.5", "memory": "1Gi"}},
-    "mlruns_mount_path": "/app/mlruns",
-    "mlruns_pvc_name": "pvc-mlruns",
+    "mlruns_mount_path": "/app/logs",  # Изменено с /app/mlruns
+    "mlruns_pvc_name": "logs-pvc",  # Изменено
     "retention_days": 30,
 }
 

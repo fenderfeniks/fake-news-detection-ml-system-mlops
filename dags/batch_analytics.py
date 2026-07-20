@@ -11,9 +11,7 @@ from kubernetes.client import models as k8s
 
 # 1. ИНФРАСТРУКТУРА
 # ИСПРАВЛЕНИЕ: Меняем тег на trainer-latest для батч-задач
-IMAGE = Variable.get(
-    "PROJECT_IMAGE", default_var="my-company/industrial_nlp_template:trainer-latest"
-)
+IMAGE = Variable.get("PROJECT_IMAGE", default_var="my-company/fake_news_detector:trainer-latest")
 NAMESPACE = Variable.get("K8S_NAMESPACE", default_var="ml-pipelines")
 
 # ИСПРАВЛЕНИЕ: Защитный словарь-заглушка от краша парсера Airflow

@@ -1,27 +1,30 @@
+# tests/unit/test_schemas.py
 import pytest
 from pydantic import ValidationError
 
-from src.api.schemas import ChatMessage, ChatRequest
+from src.api.schemas import ClassificationRequest
 
 
-def test_chat_request_accepts_valid_payload():
-    body = ChatRequest(query="Как настроить логгер?", use_rag=True, max_tokens=100)
+def test_classification_request_accepts_valid_payload():
+    """Проверка создания схемы с валидным текстом."""
+    body = ClassificationRequest(text="Власти опровергли слухи о закрытии метро.")
 
-    assert body.query == "Как настроить логгер?"
-    assert body.use_rag is True
-    assert body.max_tokens == 100
+    assert body.text == "Власти опровергли слухи о закрытии метро."
 
 
-def test_chat_request_rejects_missing_query():
+def test_classification_request_rejects_missing_text():
+    """Проверка, что схема падает, если не передать обязательное поле text."""
+    with pytest.raises(ValidationError) as exc_info:
+        ClassificationRequest()
+
+    assert "Field required" in str(exc_info.value)
+    assert "text" in str(exc_info.value)
+
+
+def test_classification_request_rejects_wrong_types():
+    """Проверка, что схема не принимает числа или списки вместо строки."""
     with pytest.raises(ValidationError):
-        ChatRequest(use_rag=False)
+        ClassificationRequest(text=["Это", "список", "а", "не", "строка"])
 
-
-def test_chat_request_accepts_dialog_history():
-    body = ChatRequest(
-        query="Продолжи",
-        history=[ChatMessage(role="user", content="Расскажи про Hydra")],
-    )
-
-    assert len(body.history) == 1
-    assert body.history[0].content == "Расскажи про Hydra"
+    with pytest.raises(ValidationError):
+        ClassificationRequest(text=12345)

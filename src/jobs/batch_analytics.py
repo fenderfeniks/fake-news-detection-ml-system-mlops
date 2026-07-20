@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 from transformers import pipeline
 
 
-# Загружаем локальный .env (если скрипт запущен не в K8s)
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
@@ -22,24 +21,23 @@ def main():
             "Environment variable DB_CONN is not set! Check your .env or K8s variables."
         )
 
-    logger.info(f"Connecting to database via DB_CONN (Mock)...")
+    logger.info("Connecting to database via DB_CONN (Mock)...")
 
-    # 1. Загрузка данных (Заглушка)
+    # 1. Загрузка данных (Заглушка адаптирована под детектирование новостей)
     df = pd.DataFrame(
         {
             "id": [1, 2, 3],
             "text": [
-                "Отличный сервис, очень помогли с кредитом!",
-                "Ужасно медленно работает приложение.",
-                "Где найти реквизиты договора?",
+                "Ученые доказали, что Земля плоская и стоит на трех китах.",
+                "Центробанк объявил о снижении ключевой ставки на 1 процентный пункт.",
+                "Шок! Инопланетяне похитили мэра Нью-Йорка во время пресс-конференции!",
             ],
         }
     )
     logger.info(f"Loaded {len(df)} records for batch inference.")
 
     # 2. Инициализация модели
-    # На практике путь должен браться из конфига (например, /app/models/prod)
-    model_path = os.getenv("MODEL_PATH", "DeepPavlov/rubert-base-cased")
+    model_path = os.getenv("MODEL_PATH", "cointegrated/rubert-tiny2")
     device = 0 if torch.cuda.is_available() else -1
 
     logger.info(f"Loading HF pipeline from {model_path} on device {device}...")

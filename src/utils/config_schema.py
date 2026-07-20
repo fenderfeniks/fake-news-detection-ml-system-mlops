@@ -42,7 +42,6 @@ class ModelModuleConfig:
     _target_: str
     num_classes: int
     optimizer_cfg: OptimizerConfig
-    loss_fn_cfg: Any
 
 
 @dataclass
@@ -69,51 +68,16 @@ class ModelBuilderConfig:
     trust_remote_code: bool
     auto_model_class: str
     torch_dtype: str
+    num_labels: int
     quantization_config: Any | None = None
     peft_config: Any | None = None
-
-
-@dataclass
-class GenerationKwargsConfig:
-    max_new_tokens: int
-    temperature: float
-    top_p: float
-    do_sample: bool
-    repetition_penalty: float
-
-
-@dataclass
-class GenerationConfig:
-    _target_: str
-    generation_kwargs: GenerationKwargsConfig
-
-
-@dataclass
-class ResponseCleanerConfig:
-    _target_: str
-    strip_prompt: bool
-    remove_special_tokens: bool
-    remove_extra_spaces: bool
-    trim_incomplete_sentence: bool
 
 
 @dataclass
 class ModelConfig:
     tokenizer: TokenizerConfig
     builder: ModelBuilderConfig
-    generation: GenerationConfig
-    cleaner: ResponseCleanerConfig
-
-    # Поля, которые прилетают из файлов архитектур (# @package model)
     model_name: str | None = None
-    is_causal_lm: bool | None = None
-    loss_fn: Any = None
-
-    # Специфичные поля для bert_multitask
-    _target_: str | None = None
-    base_builder: Any = None
-    num_sentiment_classes: int | None = None
-    num_category_classes: int | None = None
 
 
 @dataclass
@@ -155,21 +119,15 @@ class DataConfig:
     preprocessing_num_workers: int
     preprocessing_batch_size: int
     cleaner: DataCleanerPipelineConfig
-
     collator: Any
-
     dataloader: DataLoaderConfig
     datamodule: DataDataModuleConfig
     paths: Any = None
-
     text_column: str | None = None
     target_column: str | None = None
-    anchor_column: str | None = None
-    positive_column: str | None = None
-    negative_column: str | None = None
+    stratify_column: str | None = None
 
 
-# --- ОБНОВЛЕНО: Синхронизировано с logger/mlflow.yaml ---
 @dataclass
 class MLFlowLoggerConfig:
     _target_: str
@@ -185,32 +143,13 @@ class TrainerConfig:
     _target_: str
     max_epochs: int
     accelerator: str
-    devices: int
     precision: str
-    # Изменено на Any, чтобы Hydra могла без конфликтов разрезолвить ${logger}
     logger: Any
+    devices: int | str | None = None
+    limit_train_batches: Any = None
+    limit_val_batches: Any = None
+    limit_test_batches: Any = None
     callbacks: list[Any] = field(default_factory=list)
-
-
-@dataclass
-class RAGIndexerConfig:
-    _target_: str
-    documents_dir: str
-    persist_dir: str
-    chunk_size: int
-    chunk_overlap: int
-    embedding_model_name: str
-    vector_dimension: int
-    hnsw_m: int
-
-
-@dataclass
-class RAGConfig:
-    documents_dir: str
-    persist_dir: str
-    indexer: RAGIndexerConfig
-    retriever: Any
-    similarity_top_k: int
 
 
 @dataclass
@@ -223,14 +162,11 @@ class TelegramWebhookConfig:
 class TelegramMessagesConfig:
     welcome: str
     error: str
-    thinking: str
 
 
 @dataclass
 class TelegramConfig:
     bot_token: str
-    default_use_rag: bool
-    max_tokens: int
     messages: TelegramMessagesConfig
 
 
@@ -239,7 +175,6 @@ class EnvironmentConfig:
     name: str
 
 
-# Обнови APIConfig (добавь log_level)
 @dataclass
 class APIConfig:
     host: str
@@ -273,7 +208,6 @@ class ConfigSchema:
     model: ModelConfig
     data: DataConfig
     trainer: TrainerConfig
-    rag: RAGConfig
     api: APIConfig
     logger: MLFlowLoggerConfig
     model_module: ModelModuleConfig

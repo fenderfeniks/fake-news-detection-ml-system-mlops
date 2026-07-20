@@ -4,7 +4,6 @@ defaults:
   - data: default
   - model: default
   - trainer: default
-  - rag: default
   - logger: mlflow
   - api: fastapi
   - environment: local
@@ -12,9 +11,7 @@ defaults:
 
 # Глобальные параметры
 seed: 42
-# ХАРДКОД: Это название будет использоваться в логах MLFlow, 
-# в путях сохранения моделей и в метаданных экспериментов.
-project_name: "industrial_nlp_template"
+project_name: "fake_news_detector" # Обновлено под конкретную задачу
 
 # 1. Настройка оркестратора обучения (LightningModule)
 model_module:
@@ -26,19 +23,16 @@ model_module:
     _partial_: true
     lr: 2e-5
     weight_decay: 0.01
-    
-  loss_fn_cfg: ${model.loss_fn}
 
 # 2. Настройка DataModule
 datamodule:
-  _target_: src.core.data.NLPDataModule  # Исправлен путь импорта таргета
+  _target_: src.core.data.NLPDataModule
   _recursive_: false
   data_cfg: ${data}
 
 # --- Настройка логирования и рабочей директории Гидры ---
 hydra:
   run:
-    # Используем project_name для формирования структуры папок
     dir: ${paths.log_dir}/${project_name}/runs/${now:%Y-%m-%d}_${now:%H-%M-%S}
   job:
     chdir: True

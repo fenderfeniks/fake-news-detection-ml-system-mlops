@@ -1,12 +1,9 @@
-# src/training/module.py
 from typing import Any
 
 import pytorch_lightning as pl
 import torch
 from hydra.utils import instantiate
 from torchmetrics import MetricCollection
-
-# Импортируем готовые метрики
 from torchmetrics.classification import MulticlassAccuracy, MulticlassF1Score
 
 
@@ -16,7 +13,6 @@ class NLPModel(pl.LightningModule):
         model: torch.nn.Module,
         optimizer_cfg: Any,
         scheduler_cfg: Any = None,
-        loss_fn_cfg: Any = None,
         num_classes: int = 2,
     ):
         super().__init__()
@@ -24,13 +20,10 @@ class NLPModel(pl.LightningModule):
         self.optimizer_cfg = optimizer_cfg
         self.scheduler_cfg = scheduler_cfg
 
-        # 1. Добавляем loss_fn_cfg в игнор, чтобы Lightning не пытался
-        # сохранить веса функции потерь в гиперпараметры
-        self.save_hyperparameters(ignore=["model", "loss_fn_cfg"])
+        # Сохраняем гиперпараметры для логгера, исключая саму модель
+        self.save_hyperparameters(ignore=["model"])
 
-        # 2. Убираем instantiate! Hydra уже создала инстанс функции потерь.
-        self.loss_fn = loss_fn_cfg
-
+        # Метрики. Для задачи fake-news num_classes=2 подходит идеально
         metrics = MetricCollection(
             {
                 "acc": MulticlassAccuracy(num_classes=num_classes, average="macro"),
@@ -41,77 +34,41 @@ class NLPModel(pl.LightningModule):
         self.val_metrics = metrics.clone(prefix="val_")
         self.test_metrics = metrics.clone(prefix="test_")
 
-    def forward(self, input_ids, attention_mask, labels=None, **kwargs):
-        # Прокидываем **kwargs на случай кастомных голов, которым нужны sentiment_labels и т.д.
-        return self.model(
-            input_ids=input_ids, attention_mask=attention_mask, labels=labels, **kwargs
-        )
-
-    def _extract_loss_and_logits(self, outputs, batch):
-        """
-        Универсальный экстрактор.
-        Понимает HuggingFace ModelOutput и обычные Python словари (от MultiTaskBERT).
-        """
-        # 1. Достаем loss
-        if isinstance(outputs, dict):
-            loss = outputs.get("loss")
-        else:
-            loss = getattr(outputs, "loss", None)
-
-        # 2. Достаем logits
-        if isinstance(outputs, dict):
-            logits = outputs.get("logits")
-        else:
-            logits = getattr(outputs, "logits", None)
-
-        # 3. Применяем внешнюю функцию потерь, если loss не был вычислен внутри модели
-        if loss is None and logits is not None and "labels" in batch and self.loss_fn:
-            loss = self.loss_fn(logits, batch["labels"])
-
-        if loss is None:
-            raise ValueError(
-                "Model didn't return 'loss' and no external loss_fn was able to compute it. "
-                "Check your architecture configuration."
-            )
-
-        return loss, logits
+    def forward(self, input_ids, attention_mask, labels=None):
+        # AutoModelForSequenceClassification вернет SequenceClassifierOutput
+        return self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
 
     def training_step(self, batch, batch_idx):
         outputs = self(**batch)
-        loss, logits = self._extract_loss_and_logits(outputs, batch)
+        # HF модели сами считают loss, если передан labels
+        loss, logits = outputs.loss, outputs.logits
 
-        if logits is not None and "labels" in batch:
-            preds = torch.argmax(logits, dim=1)
-            self.train_metrics.update(preds, batch["labels"])
-            self.log_dict(
-                self.train_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True
-            )
+        preds = torch.argmax(logits, dim=1)
+        self.train_metrics.update(preds, batch["labels"])
 
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log_dict(self.train_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         outputs = self(**batch)
-        loss, logits = self._extract_loss_and_logits(outputs, batch)
+        loss, logits = outputs.loss, outputs.logits
 
-        if logits is not None and "labels" in batch:
-            preds = torch.argmax(logits, dim=1)
-            self.val_metrics.update(preds, batch["labels"])
-            self.log_dict(self.val_metrics, on_epoch=True, prog_bar=True, logger=True)
+        preds = torch.argmax(logits, dim=1)
+        self.val_metrics.update(preds, batch["labels"])
 
         self.log("val_loss", loss, on_epoch=True, prog_bar=True, logger=True)
+        self.log_dict(self.val_metrics, on_epoch=True, prog_bar=True, logger=True)
 
     def test_step(self, batch, batch_idx):
         outputs = self(**batch)
-        loss, logits = self._extract_loss_and_logits(outputs, batch)
+        loss, logits = outputs.loss, outputs.logits
 
-        if logits is not None and "labels" in batch:
-            preds = torch.argmax(logits, dim=1)
-            self.test_metrics.update(preds, batch["labels"])
-            self.log_dict(self.test_metrics, on_epoch=True, prog_bar=True, logger=True)
+        preds = torch.argmax(logits, dim=1)
+        self.test_metrics.update(preds, batch["labels"])
 
         self.log("test_loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        return loss
+        self.log_dict(self.test_metrics, on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         optimizer = self.optimizer_cfg(params=self.model.parameters())

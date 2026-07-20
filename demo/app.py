@@ -4,52 +4,43 @@ import requests
 import streamlit as st
 
 
-API_URL = os.getenv("API_URL", "http://localhost:8000/chat/generate")
-# ИСПРАВЛЕНИЕ: Читаем API-ключ
+# Используем актуальный эндпоинт для классификации
+API_URL = os.getenv("API_URL", "http://localhost:8000/api/v1/classify")
 API_KEY = os.getenv("API_KEY", "")
 
-st.set_page_config(page_title="Корпоративный NLP Ассистент", page_icon="🤖")
-st.title("База знаний: Вопрос-Ответ")
+st.set_page_config(page_title="Детектор Фейковых Новостей", page_icon="🕵️‍♂️")
+st.title("Детектор Фейковых Новостей")
+st.markdown("Введите текст новости, чтобы проверить, является ли она достоверной.")
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# Простое текстовое поле вместо чата
+prompt = st.text_area("Текст новости:", height=200)
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+if st.button("Проверить"):
+    if prompt.strip():
+        # Отправляем схему ClassificationRequest
+        payload = {"text": prompt}
+        headers = {"X-API-Key": API_KEY} if API_KEY else {}
 
-if prompt := st.chat_input("Задайте вопрос по корпоративным документам..."):
-    # ИСПРАВЛЕНИЕ: Вытаскиваем историю до того, как добавим текущий промпт
-    # Берем последние 10 сообщений (5 пар вопрос-ответ), чтобы не перегружать память
-    history_payload = [
-        {"role": msg["role"], "content": msg["content"]} for msg in st.session_state.messages
-    ][-10:]
-
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    # ИСПРАВЛЕНИЕ: Добавляем history в тело запроса
-    payload = {"query": prompt, "history": history_payload, "use_rag": True, "max_tokens": 512}
-
-    # ИСПРАВЛЕНИЕ: Добавляем заголовок авторизации
-    headers = {"X-API-Key": API_KEY} if API_KEY else {}
-
-    with st.chat_message("assistant"):
-        with st.spinner("Анализирую документы..."):
+        with st.spinner("Анализирую текст..."):
             try:
-                # ИСПРАВЛЕНИЕ: Увеличили таймаут до 120 секунд
-                response = requests.post(API_URL, json=payload, headers=headers, timeout=120)
+                response = requests.post(API_URL, json=payload, headers=headers, timeout=30)
                 response.raise_for_status()
-                answer = response.json().get("answer", "Пустой ответ")
 
-                st.markdown(answer)
-                st.session_state.messages.append({"role": "assistant", "content": answer})
+                result = response.json()
+                label_id = result.get("label_id")
+                confidence = result.get("confidence", 0) * 100
 
-                context = response.json().get("context_used")
-                if context:
-                    with st.expander("Посмотреть найденные документы"):
-                        st.write(context)
+                # Предположим, что 1 - это фейк, а 0 - реальная новость
+                # (можешь поменять местами в зависимости от твоего датасета)
+                if label_id == 1:
+                    st.error(f"🚨 Вероятнее всего, это ФЕЙК! (Уверенность: {confidence:.2f}%)")
+                else:
+                    st.success(f"✅ Похоже на правду. (Уверенность: {confidence:.2f}%)")
+
+                with st.expander("Детали предсказания (Вероятности классов)"):
+                    st.json(result)
 
             except requests.exceptions.RequestException as e:
                 st.error(f"Ошибка связи с сервером: {e}")
+    else:
+        st.warning("Пожалуйста, введите текст для проверки.")

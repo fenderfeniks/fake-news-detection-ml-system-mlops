@@ -12,7 +12,7 @@ from kubernetes.client import models as k8s
 
 
 # ИСПРАВЛЕНИЕ: Меняем дефолтный тег на api-latest
-IMAGE = Variable.get("PROJECT_IMAGE", default_var="my-company/industrial_nlp_template:api-latest")
+IMAGE = Variable.get("PROJECT_IMAGE", default_var="my-company/fake_news_detector:api-latest")
 NAMESPACE = Variable.get("K8S_NAMESPACE", default_var="ml-pipelines")
 
 # ИСПРАВЛЕНИЕ: Защитный словарь-заглушка от краша парсера Airflow
@@ -71,7 +71,7 @@ with DAG(
         namespace=NAMESPACE,
         image="bitnami/kubectl:latest",
         # ИСПРАВЛЕНИЕ: Исправлено имя деплоймента на то, которое задано в K8s манифестах
-        cmds=["kubectl", "rollout", "restart", "deployment/industrial-nlp-api", "-n", NAMESPACE],
+        cmds=["kubectl", "rollout", "restart", "deployment/fake-news-api", "-n", NAMESPACE],
         get_logs=True,
         is_delete_operator_pod=True,
         # ИСПРАВЛЕНИЕ: Подключаем сервисный аккаунт (критично для kubectl)

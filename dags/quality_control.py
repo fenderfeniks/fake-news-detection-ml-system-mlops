@@ -13,9 +13,7 @@ from kubernetes.client import models as k8s
 
 # 1. ИНФРАСТРУКТУРА
 # ИСПРАВЛЕНИЕ: Меняем тег на trainer-latest, так как оценка требует ML-окружения
-IMAGE = Variable.get(
-    "PROJECT_IMAGE", default_var="my-company/industrial_nlp_template:trainer-latest"
-)
+IMAGE = Variable.get("PROJECT_IMAGE", default_var="my-company/fake_news_detector:trainer-latest")
 NAMESPACE = Variable.get("K8S_NAMESPACE", default_var="ml-pipelines")
 
 # ИСПРАВЛЕНИЕ: Мощный fallback-словарь для защиты парсера

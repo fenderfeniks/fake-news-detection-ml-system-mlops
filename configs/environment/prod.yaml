@@ -2,11 +2,20 @@
 environment:
   name: "prod"
   
-# Продакшен настройки
 trainer:
   max_epochs: 10
   accelerator: gpu
-  precision: 16-mixed
+  precision: "16-mixed"
+  # Явно отключаем лимиты (1.0 означает 100% датасета)
+  limit_train_batches: 1.0
+  limit_val_batches: 1.0
+  limit_test_batches: 1.0
+
+data:
+  max_length: 512 # Используем полный контекст модели
+  dataloader:
+    batch_size: 16
+    num_workers: 4 # Включаем параллельную загрузку в K8s/Docker
 
 api:
   log_level: INFO

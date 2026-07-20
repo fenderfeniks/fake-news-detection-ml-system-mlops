@@ -4,15 +4,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "industrial_nlp_template"
+name = "fake_news_detector"
 version = "1.0.0"
-description = "Production-ready NLP framework with Hydra, RAG, FastAPI and uv"
+description = "Production-ready NLP Classification framework with Hydra, FastAPI and uv"
 readme = "README.md"
 requires-python = ">=3.10"
 
 # ==========================================
 # БАЗОВЫЙ МИНИМУМ (Ядро)
-# Устанавливается всегда. Нужен для любой задачи.
 # ==========================================
 dependencies = [
     "torch>=2.0.0",
@@ -21,7 +20,7 @@ dependencies = [
     "pydantic>=2.6.0",
     "python-dotenv>=1.0.0",
     "accelerate>=0.27.0",
-    "python-json-logger>=2.0.0" # <-- ДОБАВЛЕНО для структурированного логирования
+    "python-json-logger>=2.0.0"
 ]
 
 [project.optional-dependencies]
@@ -39,20 +38,7 @@ training = [
 ]
 
 # ==========================================
-# ГРУППА 2: RAG (Векторные базы и Поиск)
-# ==========================================
-rag = [
-    "llama-index-core>=0.10.0",
-    "llama-index-embeddings-huggingface>=0.1.3",
-    "llama-index-vector-stores-faiss>=0.1.1",
-    "llama-index-vector-stores-qdrant>=0.1.2",
-    "llama-index-readers-file>=0.1.4",
-    "faiss-cpu>=1.7.4",
-    "qdrant-client>=1.7.1"
-]
-
-# ==========================================
-# ГРУППА 3: INFERENCE (API и Боты)
+# ГРУППА 2: INFERENCE (API и Боты)
 # ==========================================
 api = [
     "fastapi>=0.110.0",
@@ -61,13 +47,12 @@ api = [
     "aiohttp>=3.9.3",
     "prometheus-fastapi-instrumentator>=6.1.0",
     "prometheus-client>=0.20.0",
-    "slowapi>=0.1.9", # <-- ДОБАВЛЕНО для Rate Limiting
-    "redis>=5.0.0"    # <-- ДОБАВЛЕНО для масштабирования сессий aiogram
+    "slowapi>=0.1.9",
+    "redis>=5.0.0"    
 ]
 
 # ==========================================
-# ГРУППА 4: ОРКЕСТРАЦИЯ (Airflow)
-# Ставится для локальной разработки и тестирования DAG-ов
+# ГРУППА 3: ОРКЕСТРАЦИЯ (Airflow)
 # ==========================================
 orchestration = [
     "apache-airflow>=2.8.0",
@@ -76,9 +61,8 @@ orchestration = [
 ]
 
 # ==========================================
-# ГРУППА 5: EDA (EDA, Notebooks)
+# ГРУППА 4: EDA (EDA, Notebooks)
 # ==========================================
-
 experimentation = [
     "jupyterlab>=4.1.0",
     "pandas>=2.0.0",
@@ -89,7 +73,7 @@ experimentation = [
 ]
 
 # ==========================================
-# ГРУППА 6: РАЗРАБОТКА (Dev Tools)
+# ГРУППА 5: РАЗРАБОТКА (Dev Tools)
 # ==========================================
 dev = [
     "pytest>=8.0.0",
@@ -97,18 +81,16 @@ dev = [
     "httpx>=0.27.0",
     "ruff>=0.3.0",
     "mypy>=1.8.0",
-    "industrial-nlp-template[experimentation]" # Наследуем всё для экспериментов
+    "fake-news-detector[experimentation]" # Обновлено имя пакета
 ]
 
 # ==========================================
-# ГРУППА 7: HPO (Подбор гиперпараметров)
-# Вынесено отдельно, чтобы не утяжелять базовый training
+# ГРУППА 6: HPO (Подбор гиперпараметров)
 # ==========================================
 tune = [
     "optuna>=3.6.0",
-    "optuna-integration>=3.6.0" # Важно: интеграции с MLflow и PL теперь живут в отдельном пакете
+    "optuna-integration>=3.6.0" 
 ]
-
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

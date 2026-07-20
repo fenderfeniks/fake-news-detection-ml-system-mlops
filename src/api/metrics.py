@@ -1,14 +1,15 @@
+# src/api/metrics.py
 from prometheus_client import Counter, Histogram
 
 
-# Счетчик генераций (разбиваем по источнику: tg_bot или rest_api)
-LLM_GENERATIONS_TOTAL = Counter(
-    "nlp_generations_total",
-    "Total number of generation requests",
+# Счетчик запросов на классификацию
+CLASSIFICATION_REQUESTS_TOTAL = Counter(
+    "nlp_classification_requests_total",
+    "Total number of classification requests",
     ["source"],  # label: "tg", "rest"
 )
 
-# Время чистой работы ML-модели (без учета сети)
-LLM_INFERENCE_TIME = Histogram(
-    "nlp_inference_seconds", "Time spent generating response in LLM", ["source"]
+# Время инференса классификатора
+CLASSIFICATION_INFERENCE_TIME = Histogram(
+    "nlp_classification_inference_seconds", "Time spent classifying text in model", ["source"]
 )

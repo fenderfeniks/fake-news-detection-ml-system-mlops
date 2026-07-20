@@ -6,15 +6,16 @@ defaults:
 
 paths: ${paths}
 
-text_column: "text"      # Исправлено для задачи классификации
-target_column: "label"   # Исправлено для задачи классификации
+text_column: "text"      
+target_column: "label"   
+stratify_column: "label"
 max_length: 512
 val_split_size: 0.1
 
 seed: ${seed}
 
-preprocessing_num_workers: 4    # Количество ядер процессора для очистки
-preprocessing_batch_size: 1000  # Размер чанка для параллельного map
+preprocessing_num_workers: 4    
+preprocessing_batch_size: 1000  
 
 # --- 2. Пайплайн очистки ---
 cleaner:
@@ -24,16 +25,15 @@ cleaner:
       pattern: "<.*?>"
       replacement: " "
     - _target_: src.core.data.cleaners.RegexCleaner
-      pattern: "\\s+" # Убираем лишние пробелы
+      pattern: "\\s+" 
       replacement: " "
 
 # --- 3. Коллатор ---
 collator:
   _target_: src.core.data.collators.DynamicTextCollator
-  max_length: ${data.max_length}          # Ссылаемся на параметр выше
-  text_column: ${data.text_column}        # Ссылаемся на параметр выше
-  target_column: ${data.target_column}    # Ссылаемся на параметр выше
-  is_causal_lm: ${model.is_causal_lm}     # Интерполяция: тянем из конфига модели
+  max_length: ${data.max_length}          
+  text_column: ${data.text_column}        
+  target_column: ${data.target_column}    
 
 # --- 4. Настройки DataLoader ---
 dataloader:
@@ -45,4 +45,3 @@ dataloader:
 # --- 5. Сам DataModule ---
 datamodule:
   _target_: src.core.data.NLPDataModule
-  # Сюда мы передадим data_cfg и tokenizer уже внутри кода (через instantiate)

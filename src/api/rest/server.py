@@ -11,19 +11,17 @@ from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Security
 from fastapi.security import APIKeyHeader
 from hydra.core.global_hydra import GlobalHydra
-from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from prometheus_fastapi_instrumentator import Instrumentator
-
-# ИСПРАВЛЕНИЕ: Удален импорт Limiter и get_remote_address, чтобы не затирать переменную
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from src.api.rest.endpoints import chat, health
+from src.api.rest.endpoints import classify, health
 from src.api.rest.limiter import limiter
 from src.api.rest.middlewares import setup_middlewares
 from src.api.tg_bot.bot_webhook import dp, get_webhook_bot
+from src.sdk.inference import NLPPipeline
 
 
 logger = logging.getLogger(__name__)
@@ -52,29 +50,9 @@ def create_app(load_ml: bool = True) -> FastAPI:
         app.state.ml_models = {}
 
         if load_ml:
-            logger.info("Загрузка ML моделей в видеопамять...")
-            tokenizer = instantiate(cfg.model.tokenizer).build()
-            model = instantiate(cfg.model.builder, tokenizer=tokenizer).build()
-            generator = instantiate(cfg.model.generation, model=model, tokenizer=tokenizer)
-
-            retriever_cfg = cfg.get("rag", {}).get("retriever")
-            if retriever_cfg:
-                retriever = instantiate(retriever_cfg)
-            else:
-                from src.core.rag.retriever import RAGRetriever
-
-                # ИСПРАВЛЕНИЕ: Передаем обязательный persist_dir из конфига
-                retriever = RAGRetriever(persist_dir=cfg.rag.persist_dir)
-
-            prompt_manager = instantiate(cfg.model_module.get("prompt_manager_cfg", None))
-            if not prompt_manager:
-                from src.core.models.promts import PromptManager
-
-                prompt_manager = PromptManager
-
-            app.state.ml_models["generator"] = generator
-            app.state.ml_models["retriever"] = retriever
-            app.state.ml_models["prompt_manager"] = prompt_manager
+            logger.info("Загрузка ML модели классификации в видеопамять...")
+            classifier = NLPPipeline(config_name="main")
+            app.state.ml_models["classifier"] = classifier
 
             bot_token = os.getenv("TG_BOT_TOKEN") or cfg.api.telegram.bot_token
             if bot_token:
@@ -100,7 +78,6 @@ def create_app(load_ml: bool = True) -> FastAPI:
             except ImportError:
                 pass
 
-    # ИСПРАВЛЕНИЕ: Удалена глобальная зависимость verify_api_key
     app = FastAPI(
         title=cfg.api.title,
         description=cfg.api.description,
@@ -115,10 +92,8 @@ def create_app(load_ml: bool = True) -> FastAPI:
     app.state.config = cfg
     setup_middlewares(app, cors_origins=list(cfg.api.cors_origins))
 
-    # ИСПРАВЛЕНИЕ: Healthcheck остается открытым для K8s
     app.include_router(health.router)
-    # ИСПРАВЛЕНИЕ: Защищаем API-ключом только боевые эндпоинты
-    app.include_router(chat.router, dependencies=[Depends(verify_api_key)])
+    app.include_router(classify.router, dependencies=[Depends(verify_api_key)])
 
     Instrumentator(should_group_status_codes=False, should_ignore_untemplated=True).instrument(
         app
@@ -133,9 +108,7 @@ def create_app(load_ml: bool = True) -> FastAPI:
             bot,
             update=types.Update(**update),
             cfg=cfg,
-            generator=app.state.ml_models.get("generator"),
-            retriever=app.state.ml_models.get("retriever"),
-            prompt_manager=app.state.ml_models.get("prompt_manager"),
+            classifier=app.state.ml_models.get("classifier"),
         )
         return {"status": "ok"}
 

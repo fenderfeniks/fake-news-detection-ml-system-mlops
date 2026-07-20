@@ -10,29 +10,24 @@ from hydra.core.global_hydra import GlobalHydra
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
-from src.core.models.parsers import ResponseCleaner
 from src.utils.hf_hub import download_hf_artifact
 
 
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("huggingface_hub").setLevel(logging.WARNING)
 
 
 class NLPPipeline:
     """
-    Универсальный SDK для работы с NLP-моделями (Классификация и Генерация).
-    Скрывает внутри инициализацию Hydra, токенизаторов, моделей и постпроцессинг.
+    SDK для инференса моделей классификации текста.
+    Скрывает внутри инициализацию Hydra, токенизаторов и загрузку весов.
     """
 
     MODELS = {
-        "spam": {
-            "hf_repo_id": "tvoi_nik/spam-classifier",
+        "fake_news": {
+            "hf_repo_id": "your_username/fake-news-classifier",
             "checkpoint_path": "best.ckpt",
-            "task": "classification",
-        },
-        "script_generator": {
-            "hf_repo_id": "tvoi_nik/video-script-llama",
-            "checkpoint_path": "adapter_model",  # Указываем папку для LoRA
-            "task": "generation",
         },
     }
 
@@ -42,18 +37,13 @@ class NLPPipeline:
         config_name: str = "main",
         checkpoint_path: str | None = None,
         hf_repo_id: str | None = None,
-        task: str = "classification",
-        cleaner_kwargs: dict[str, Any] | None = None,
     ):
-        self.task = task
-
         if model_name and model_name in self.MODELS:
             hf_repo_id = self.MODELS[model_name]["hf_repo_id"]
             checkpoint_path = self.MODELS[model_name]["checkpoint_path"]
-            self.task = self.MODELS[model_name]["task"]
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        logger.info(f"Инициализация NLPPipeline ({self.task}) на устройстве: {self.device}")
+        logger.info(f"Инициализация NLPPipeline (Classification) на устройстве: {self.device}")
 
         # 1. Загрузка конфигурации Hydra
         config_dir = str(Path(__file__).resolve().parents[2] / "configs")
@@ -74,7 +64,6 @@ class NLPPipeline:
         # 3. Загрузка кастомных весов
         if checkpoint_path:
             if hf_repo_id and not os.path.exists(checkpoint_path):
-                # Если передан файл, скачиваем его
                 checkpoint_path = download_hf_artifact(
                     repo_id=hf_repo_id, filename=checkpoint_path, local_dir="./models/downloaded"
                 )
@@ -82,11 +71,6 @@ class NLPPipeline:
 
         self.model.to(self.device)
         self.model.eval()
-
-        # 4. Инициализация клинера для генерации
-        if self.task == "generation":
-            cleaner_kwargs = cleaner_kwargs or {}
-            self.cleaner = ResponseCleaner(**cleaner_kwargs)
 
     def _load_weights(self, path: str) -> None:
         """Умная загрузка весов (State Dict или LoRA)."""
@@ -111,17 +95,8 @@ class NLPPipeline:
                 self.model.load_state_dict(checkpoint, strict=False)
 
     @torch.no_grad()
-    def __call__(self, texts: str | list[str], **kwargs) -> list[dict[str, float]] | list[str]:
-        """Точка входа. Перенаправляет запрос в зависимости от задачи."""
-        if self.task == "classification":
-            return self._predict_class(texts)
-        elif self.task == "generation":
-            return self._generate_text(texts, **kwargs)
-        else:
-            raise ValueError(f"Неизвестный тип задачи: {self.task}")
-
-    def _predict_class(self, texts: str | list[str]) -> list[dict[str, float]]:
-        """Логика классификации (напр., Spam / Not Spam)."""
+    def __call__(self, texts: str | list[str]) -> list[dict[str, Any]]:
+        """Логика инференса классификации."""
         if isinstance(texts, str):
             texts = [texts]
 
@@ -149,43 +124,3 @@ class NLPPipeline:
             )
 
         return results
-
-    @torch.inference_mode()
-    def _generate_text(self, texts: str | list[str], **kwargs) -> list[str]:
-        """Логика генерации текста с поддержкой **kwargs для декодирования."""
-        if isinstance(texts, str):
-            texts = [texts]
-
-        # 1. Токенизация
-        inputs = self.tokenizer(texts, padding=True, truncation=True, return_tensors="pt").to(
-            self.device
-        )
-
-        # 2. Настройка параметров генерации
-        gen_kwargs = {"max_new_tokens": 256, "temperature": 0.7, "do_sample": True}
-        gen_kwargs.update(kwargs)  # Перезаписываем параметры теми, что передал пользователь
-
-        # 3. Вызов встроенного метода генерации
-        generated_ids = self.model.generate(
-            **inputs,
-            **gen_kwargs,
-            pad_token_id=self.tokenizer.pad_token_id,
-            eos_token_id=self.tokenizer.eos_token_id,
-        )
-
-        # 4. Обрезка входного промпта
-        input_length = inputs["input_ids"].shape[1]
-        output_ids = generated_ids[:, input_length:]
-
-        # 5. Декодирование
-        decoded_texts = self.tokenizer.batch_decode(
-            output_ids, skip_special_tokens=False, clean_up_tokenization_spaces=True
-        )
-
-        # 6. Очистка ответов через ResponseCleaner
-        final_responses = []
-        for prompt, raw_response in zip(texts, decoded_texts, strict=False):
-            cleaned_text = self.cleaner.clean(raw_text=raw_response, prompt=prompt)
-            final_responses.append(cleaned_text)
-
-        return final_responses

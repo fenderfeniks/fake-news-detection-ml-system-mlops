@@ -1,6 +1,9 @@
+# configs/model/default.yaml
 defaults:
   - _self_
-  - architecture: bert_classifier
+  - architecture: rubert_base # Переименовано с bert_classifier
+
+model_name: ???
 
 tokenizer:
   _target_: src.core.models.tokenization.HFTokenizerBuilder
@@ -14,21 +17,6 @@ builder:
   model_name_or_path: ${model.model_name}
   cache_dir: "${paths.hf_cache_dir}"
   trust_remote_code: False
-  auto_model_class: "transformers.AutoModel" 
+  auto_model_class: "transformers.AutoModelForSequenceClassification" 
   torch_dtype: "auto"
-
-generation:
-  _target_: src.core.models.generation.HFTextGenerator
-  generation_kwargs:
-    max_new_tokens: 256
-    temperature: 0.7
-    top_p: 0.9
-    do_sample: True
-    repetition_penalty: 1.1
-
-cleaner:
-  _target_: src.core.models.parsers.ResponseCleaner
-  strip_prompt: true
-  remove_special_tokens: true
-  remove_extra_spaces: true
-  trim_incomplete_sentence: true
+  num_labels: 2

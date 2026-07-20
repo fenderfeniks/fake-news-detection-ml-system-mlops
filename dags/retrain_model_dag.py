@@ -12,9 +12,7 @@ from kubernetes.client import models as k8s
 
 
 # ИНФРАСТРУКТУРА
-IMAGE = Variable.get(
-    "PROJECT_IMAGE", default_var="my-company/industrial_nlp_template:trainer-latest"
-)
+IMAGE = Variable.get("PROJECT_IMAGE", default_var="my-company/fake_news_detector:trainer-latest")
 NAMESPACE = Variable.get("K8S_NAMESPACE", default_var="ml-pipelines")
 
 # Защитный словарь-заглушка
@@ -41,7 +39,7 @@ default_args = {
 }
 
 with DAG(
-    "weekly_llm_finetuning",
+    "weekly_classifier_finetuning",
     default_args=default_args,
     schedule_interval=CONFIG["schedule"],
     catchup=False,

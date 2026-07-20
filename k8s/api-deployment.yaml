@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: industrial-nlp-api
+  name: fake-news-api
   namespace: ml-pipelines
   labels:
-    app: nlp-api
+    app: fake-news-api
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nlp-api
+      app: fake-news-api
   template:
     metadata:
       labels:
-        app: nlp-api
+        app: fake-news-api
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8000"
@@ -21,21 +21,21 @@ spec:
     spec:
       containers:
       - name: fastapi-server
-        image: my-company/industrial_nlp_template:api-latest
+        image: my-company/fake_news_detector:api-latest
         ports:
         - containerPort: 8000
         envFrom:
         - secretRef:
-            name: nlp-api-secrets
+            name: fake-news-api-secrets
         - configMapRef:
-            name: nlp-api-config
+            name: fake-news-api-config
         volumeMounts:
         - name: model-weights
           mountPath: /app/models
         - name: data-volume
           mountPath: /app/data
-        - name: mlruns-volume
-          mountPath: /app/mlruns
+        - name: logs-volume
+          mountPath: /app/logs
         resources:
           requests:
             cpu: "2"
@@ -64,6 +64,6 @@ spec:
       - name: data-volume
         persistentVolumeClaim:
           claimName: pvc-data
-      - name: mlruns-volume
+      - name: logs-volume
         persistentVolumeClaim:
-          claimName: pvc-mlruns
+          claimName: logs-pvc

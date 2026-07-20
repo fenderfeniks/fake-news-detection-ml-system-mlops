@@ -1,4 +1,4 @@
-# 1. Диск для весов моделей (Используется в API и в Airflow DAG: weekly_llm_finetuning)
+# 1. Диск для весов моделей
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -6,13 +6,13 @@ metadata:
   namespace: ml-pipelines
 spec:
   accessModes:
-    - ReadWriteMany # RWX: критично для ML пайплайнов!
+    - ReadWriteMany 
   resources:
     requests:
-      storage: 50Gi # Выделяем 50 ГБ под чекпоинты и адаптеры
+      storage: 50Gi 
 
 ---
-# 2. Диск для сырых документов (Используется в Airflow DAG: rag_knowledge_base_update)
+# 2. Диск для сырых датасетов классификатора
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -26,11 +26,11 @@ spec:
       storage: 20Gi
 
 ---
-# 3. Диск для логов и экспериментов (Используется в Airflow DAG: system_maintenance)
+# 3. Диск для логов и SQLite базы MLflow
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pvc-mlruns
+  name: logs-pvc
   namespace: ml-pipelines
 spec:
   accessModes:
