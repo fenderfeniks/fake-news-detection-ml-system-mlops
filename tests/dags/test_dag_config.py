@@ -1,4 +1,3 @@
-import importlib
 
 
 def _get_schedule(dag):

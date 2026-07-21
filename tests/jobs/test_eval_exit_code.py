@@ -1,4 +1,3 @@
-import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -42,7 +41,6 @@ def test_eval_does_not_exit_when_metric_above_threshold():
 
 def test_eval_warns_when_metric_key_missing():
     """Если ключ метрики не найден в результатах — warning, не падение."""
-    import logging
 
     from src.eval import _check_drift
 

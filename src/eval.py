@@ -6,11 +6,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-import hydra
-from omegaconf import DictConfig
+import hydra  # noqa: E402
+from omegaconf import DictConfig  # noqa: E402
 
-from src.utils.hydra_utils import setup_config
-from src.utils.torch_utils import register_safe_globals
+from src.utils.hydra_utils import setup_config  # noqa: E402
+from src.utils.torch_utils import register_safe_globals  # noqa: E402
 
 
 logger = logging.getLogger(__name__)

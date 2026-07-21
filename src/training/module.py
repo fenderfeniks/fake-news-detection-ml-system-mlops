@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import matplotlib.pyplot as plt
 import pytorch_lightning as pl
@@ -21,8 +21,8 @@ class NLPModel(pl.LightningModule):
         optimizer_cfg: Any,
         scheduler_cfg: Any = None,
         num_classes: int = 2,
-        target_precision: Optional[float] = None,
-        target_recall: Optional[float] = None,
+        target_precision: float | None = None,
+        target_recall: float | None = None,
     ):
         super().__init__()
         self.model = model

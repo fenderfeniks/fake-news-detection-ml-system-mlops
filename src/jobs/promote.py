@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def main():
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
     if not tracking_uri:
-        raise EnvironmentError("MLFLOW_TRACKING_URI не задан.")
+        raise OSError("MLFLOW_TRACKING_URI не задан.")
 
     model_name = os.getenv("MLFLOW_MODEL_NAME", "FakeNewsDetector")
     mlflow.set_tracking_uri(tracking_uri)
