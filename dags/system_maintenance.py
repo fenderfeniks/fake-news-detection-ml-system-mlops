@@ -37,7 +37,7 @@ default_args = {
 with DAG(
     "system_maintenance",
     default_args=default_args,
-    schedule_interval=CONFIG["schedule"],
+    schedule=CONFIG["schedule"],
     catchup=False,
     tags=["maintenance", "nlp"],
 ) as dag:

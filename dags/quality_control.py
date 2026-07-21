@@ -47,7 +47,7 @@ default_args = {
 with DAG(
     "model_drift_detection",
     default_args=default_args,
-    schedule_interval=CONFIG["schedule"],
+    schedule=CONFIG["schedule"],
     catchup=False,
     tags=["nlp", "monitoring"],
 ) as dag:

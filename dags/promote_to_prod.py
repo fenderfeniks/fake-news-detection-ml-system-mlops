@@ -36,7 +36,7 @@ default_args = {
 with DAG(
     "promote_to_prod",
     default_args=default_args,
-    schedule_interval=None,  # СТРОГО РУЧНОЙ ЗАПУСК
+    schedule=None,  # СТРОГО РУЧНОЙ ЗАПУСК
     catchup=False,
     tags=["nlp", "mlops", "production"],
 ) as dag:

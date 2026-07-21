@@ -41,7 +41,7 @@ default_args = {
 with DAG(
     "weekly_classifier_finetuning",
     default_args=default_args,
-    schedule_interval=CONFIG["schedule"],
+    schedule=CONFIG["schedule"],
     catchup=False,
     tags=["nlp", "training"],
 ) as dag:

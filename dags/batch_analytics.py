@@ -42,7 +42,7 @@ default_args = {
 with DAG(
     "batch_analytics_reporting",
     default_args=default_args,
-    schedule_interval=CONFIG["schedule"],
+    schedule=CONFIG["schedule"],
     catchup=False,
     tags=["nlp", "analytics"],
 ) as dag:

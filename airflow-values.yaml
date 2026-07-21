@@ -1,0 +1,24 @@
+# airflow-values.yaml
+
+# Используем KubernetesExecutor для запуска тасок в изолированных подах
+executor: "KubernetesExecutor"
+
+# Настройки веб-интерфейса и создание дефолтного админа
+webserver:
+  defaultUser:
+    enabled: true
+    role: Admin
+    username: admin
+    password: admin
+    firstName: Admin
+    lastName: User
+    email: admin@example.com
+
+# Настройки для загрузки DAG'ов (пока заготовки под GitSync)
+dags:
+  gitSync:
+    enabled: true
+    # Раскомментируй и заполни, когда зальешь код в Git:
+    repo: https://github.com/fenderfeniks/fake-news-detection-ml-system-mlops.git
+    branch: master
+    subPath: dags
