@@ -1,16 +1,16 @@
 import logging
+import sys
 
 from dotenv import load_dotenv
 
 
-# Загружаем окружение до Гидры!
 load_dotenv()
 
-import hydra  # noqa: E402
-from omegaconf import DictConfig  # noqa: E402
+import hydra
+from omegaconf import DictConfig
 
-from src.utils.hydra_utils import setup_config  # noqa: E402
-from src.utils.torch_utils import register_safe_globals  # noqa: E402
+from src.utils.hydra_utils import setup_config
+from src.utils.torch_utils import register_safe_globals
 
 
 logger = logging.getLogger(__name__)
@@ -29,29 +29,72 @@ def evaluate(cfg: DictConfig) -> None:
 
     model_module = hydra.utils.instantiate(cfg.model_module, model=base_model)
     datamodule = hydra.utils.instantiate(cfg.datamodule, tokenizer=tokenizer)
-
     trainer = hydra.utils.instantiate(cfg.trainer)
 
-    # Путь к PyTorch Lightning чекпоинту (.ckpt)
     ckpt_path = cfg.get("ckpt_path")
 
     if ckpt_path:
         logger.info(f"Загрузка кастомного PL чекпоинта из: {ckpt_path}")
         register_safe_globals()
     elif getattr(model_builder, "loaded_from_mlflow", False):
-        logger.info(
-            "Модель успешно загружена из MLflow Production. Запуск оценки на скачанных весах."
-        )
+        logger.info("Модель успешно загружена из MLflow Production.")
     else:
-        logger.warning(
-            "Модель не из MLflow и путь к чекпоинту не передан. Запуск оценки на базовых весах."
-        )
+        logger.warning("Модель не из MLflow и путь не передан. Оценка на базовых весах.")
 
     logger.info("Старт процесса оценки...")
-    # Метод test() сам загрузит стейты из .ckpt и подменит веса в model_module
-    trainer.test(model=model_module, datamodule=datamodule, ckpt_path=ckpt_path)
+    results = trainer.test(model=model_module, datamodule=datamodule, ckpt_path=ckpt_path)
     logger.info("Оценка завершена.")
+
+    # ДОБАВЛЕНО: проверка порога и сигнал для Airflow
+    # trainer.test() возвращает список словарей с метриками — берём первый
+    if results:
+        metrics = results[0]
+        # Ключ метрики — тот же что логирует твой LightningModule в test_step
+        # Подставь свой: "test_f1", "test_accuracy" и т.д.
+        primary_metric = metrics.get("test_f1") or metrics.get("test_accuracy")
+        drift_threshold = cfg.get("drift_threshold")
+
+        if primary_metric is not None and drift_threshold is not None:
+            logger.info(f"Метрика: {primary_metric:.4f}, порог: {drift_threshold}")
+            if primary_metric < drift_threshold:
+                logger.error(
+                    f"ДРИФТ ОБНАРУЖЕН: {primary_metric:.4f} < {drift_threshold}. "
+                    "Airflow получит exit code 1 → Slack алерт сработает."
+                )
+                sys.exit(1)
+        else:
+            logger.warning(
+                "Метрика или порог не найдены в конфиге/результатах — "
+                "проверка дрифта пропущена. "
+                f"Доступные метрики: {list(metrics.keys())}"
+            )
+
+
+def _check_drift(results: list[dict], drift_threshold: float, metric_key: str = "test_f1"):
+    """Выделено отдельно для тестируемости без Hydra."""
+    if not results:
+        logger.warning("trainer.test() вернул пустые результаты — проверка дрифта пропущена.")
+        return
+
+    metrics = results[0]
+    primary_metric = metrics.get(metric_key)
+
+    if primary_metric is None:
+        logger.warning(
+            f"Ключ метрики '{metric_key}' не найден в результатах. "
+            f"Доступные: {list(metrics.keys())}. Проверка дрифта пропущена."
+        )
+        return
+
+    logger.info(f"Метрика {metric_key}: {primary_metric:.4f}, порог: {drift_threshold}")
+
+    if primary_metric < drift_threshold:
+        logger.error(f"ДРИФТ: {primary_metric:.4f} < {drift_threshold}. Выход с кодом 1.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    evaluate()
+    try:
+        evaluate()
+    except SystemExit as e:
+        raise e  # пробрасываем дальше, не глотаем

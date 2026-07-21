@@ -3,4 +3,3 @@ source_type: "kaggle"
 raw_dir: "${paths.data_dir}/raw"
 dataset_name: "bayes2003/emails-for-spam-or-ham-classification-trec-2006"
 file_name: "email_text.csv"
-token: ${oc.env:KAGGLE_TOKEN, null}

@@ -29,6 +29,18 @@ spec:
             name: fake-news-api-secrets
         - configMapRef:
             name: fake-news-api-config
+        # Kaggle credentials нужны API если он скачивает датасет при старте
+        env:
+        - name: KAGGLE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: fake-news-api-secrets
+              key: KAGGLE_USERNAME
+        - name: KAGGLE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fake-news-api-secrets
+              key: KAGGLE_KEY
         volumeMounts:
         - name: model-weights
           mountPath: /app/models
@@ -43,7 +55,6 @@ spec:
           limits:
             cpu: "1"
             memory: "4Gi"
-            #nvidia.com/gpu: "1"
         readinessProbe:
           httpGet:
             path: /health

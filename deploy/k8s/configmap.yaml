@@ -7,7 +7,11 @@ data:
   API_PORT: "8000"
   ENVIRONMENT: "production"
   LOG_LEVEL: "INFO"
-  
+
   MODEL_WEIGHTS_DIR: "/app/models"
   MLRUNS_DIR: "/app/logs"
   DATA_DIR: "/app/data"
+
+  # ДОБАВЛЕНО: нужны batch_analytics и inference
+  MLFLOW_TRACKING_URI: "http://mlflow-service:5000"
+  MLFLOW_MODEL_NAME: "FakeNewsDetector"

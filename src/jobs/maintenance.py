@@ -20,7 +20,7 @@ def cleanup_mlruns(days: int):
     которые старше указанного количества дней.
     """
     # Путь по умолчанию соответствует нашему mount_path в Airflow и Docker
-    target_dir = os.getenv("MLRUNS_DIR", "/app/mlruns")
+    target_dir = os.getenv("MLRUNS_DIR", "/app/logs")
     logger.info(f"Запуск очистки логов в {target_dir} старше {days} дней...")
 
     if not os.path.exists(target_dir):

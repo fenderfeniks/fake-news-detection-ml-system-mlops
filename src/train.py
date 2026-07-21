@@ -133,37 +133,14 @@ def train(cfg: DictConfig) -> None:
             #    не хуже текущей Production (или Production ещё нет).
             #    Обходим случайный откат метрики из-за нестабильного рана.
             client = MlflowClient()
-            should_promote = True
-            current_score = None
+            client.set_registered_model_alias(
+                name=reg_model_name, alias="Staging", version=mv_version
+            )
             if best_score is not None:
-                try:
-                    current_prod = client.get_model_version_by_alias(reg_model_name, "Production")
-                    current_score = (
-                        float(current_prod.tags["val_f1"])
-                        if current_prod.tags.get("val_f1") is not None
-                        else None
-                    )
-                    should_promote = current_score is None or best_score >= current_score
-                except Exception:
-                    # Алиаса Production ещё нет (или тег val_f1 не проставлен
-                    # на текущей версии) — считаем, что промоутить можно.
-                    should_promote = True
-
-            if should_promote:
-                client.set_registered_model_alias(
-                    name=reg_model_name, alias="Production", version=mv_version
-                )
-                if best_score is not None:
-                    client.set_model_version_tag(
-                        reg_model_name, mv_version, "val_f1", str(best_score)
-                    )
-                logger.info(f" Версии {mv_version} присвоен алиас 'Production'!")
-            else:
-                logger.info(
-                    f"Версия {mv_version} не превзошла текущий Production "
-                    f"({best_score} < {current_score}) — алиас не переставлен. "
-                    f"Промоутить вручную при необходимости."
-                )
+                client.set_model_version_tag(reg_model_name, mv_version, "val_f1", str(best_score))
+            logger.info(
+                f"Версия {mv_version} помечена как Staging. Запусти promote_to_prod для продакшна."
+            )
 
     except Exception as e:
         logger.exception("Произошла критическая ошибка во время обучения:")

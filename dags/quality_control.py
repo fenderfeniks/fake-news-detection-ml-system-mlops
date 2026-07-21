@@ -58,26 +58,29 @@ with DAG(
         namespace=NAMESPACE,
         image=IMAGE,
         cmds=["python", "-m", "src.eval"],
-        arguments=[f"ckpt_path={CONFIG['mount_path']}/best.ckpt"],
-        container_resources=k8s.V1ResourceRequirements(**CONFIG["resources"]),
-        volume_mounts=[k8s.V1VolumeMount(name="model-weights", mount_path=CONFIG["mount_path"])],
-        volumes=[
-            k8s.V1Volume(
-                name="model-weights",
-                persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(
-                    claim_name=CONFIG["pvc_name"]
-                ),
-            )
+        # БЫЛО: ckpt_path с PVC
+        # СТАЛО: грузим из MLflow Staging
+        arguments=[
+            f"drift_threshold={CONFIG['drift_threshold']}",
+            # eval.py через model.builder.use_mlflow_registry=true
+            # сам загрузит модель из MLflow@Staging
+            "model.builder.mlflow_alias=Staging",
         ],
+        env_from=[
+            k8s.V1EnvFromSource(
+                config_map_ref=k8s.V1ConfigMapEnvSource(name="fake-news-api-config")
+            ),
+        ],
+        # PVC для весов больше не нужен — убираем volume_mounts и volumes
+        service_account_name="airflow-worker-sa",
         get_logs=True,
         is_delete_operator_pod=True,
-        # ИСПРАВЛЕНИЕ: Подключаем сервисный аккаунт
-        service_account_name="airflow-worker-sa",
     )
 
     # 2. Динамический алерт
     threshold_percent = int(CONFIG["drift_threshold"] * 100)
-
+    # КОНТРАКТ: notify_slack сработает только если evaluate_model завершился с exit code != 0
+    # Убедись что src.eval делает sys.exit(1) когда метрика < drift_threshold
     notify_slack = SlackWebhookOperator(
         task_id="alert_if_drift",
         slack_webhook_conn_id="slack_conn",

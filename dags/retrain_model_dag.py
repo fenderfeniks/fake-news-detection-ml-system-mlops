@@ -71,6 +71,23 @@ with DAG(
                     )
                 ),
             ),
+            # ДОБАВЛЕНО: Kaggle нужен для скачивания датасета перед обучением
+            k8s.V1EnvVar(
+                name="KAGGLE_USERNAME",
+                value_from=k8s.V1EnvVarSource(
+                    secret_key_ref=k8s.V1SecretKeySelector(
+                        name="fake-news-api-secrets", key="KAGGLE_USERNAME"
+                    )
+                ),
+            ),
+            k8s.V1EnvVar(
+                name="KAGGLE_KEY",
+                value_from=k8s.V1EnvVarSource(
+                    secret_key_ref=k8s.V1SecretKeySelector(
+                        name="fake-news-api-secrets", key="KAGGLE_KEY"
+                    )
+                ),
+            ),
         ],
         volume_mounts=[k8s.V1VolumeMount(name="model-weights", mount_path=CONFIG["mount_path"])],
         volumes=[

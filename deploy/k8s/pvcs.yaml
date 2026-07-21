@@ -1,19 +1,4 @@
-# 1. Диск для весов моделей
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: pvc-models
-  namespace: ml-pipelines
-spec:
-  storageClassName: hostpath
-  accessModes:
-    - ReadWriteOnce  # заменить ReadWriteMany → ReadWriteOnce (локально RWX не поддерживается) 
-  resources:
-    requests:
-      storage: 50Gi 
-
----
-# 2. Диск для сырых датасетов классификатора
+# 1. Данные
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -22,13 +7,13 @@ metadata:
 spec:
   storageClassName: hostpath
   accessModes:
-    - ReadWriteOnce  # заменить ReadWriteMany → ReadWriteOnce (локально RWX не поддерживается)
+    - ReadWriteOnce
   resources:
     requests:
       storage: 20Gi
 
 ---
-# 3. Диск для логов и SQLite базы MLflow
+# 2. Логи и MLflow DB
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -37,7 +22,7 @@ metadata:
 spec:
   storageClassName: hostpath
   accessModes:
-    - ReadWriteOnce  # заменить ReadWriteMany → ReadWriteOnce (локально RWX не поддерживается)
+    - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi

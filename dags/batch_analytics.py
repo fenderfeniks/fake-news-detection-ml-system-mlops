@@ -53,10 +53,15 @@ with DAG(
         image=IMAGE,
         cmds=["python", "-m", "src.jobs.batch_analytics"],
         container_resources=k8s.V1ResourceRequirements(**CONFIG["resources"]),
-        # ИСПРАВЛЕНИЕ: Подключаем сервисный аккаунт с правами RBAC
         service_account_name="airflow-worker-sa",
+        # ДОБАВЛЕНО: envFrom подхватывает MLFLOW_TRACKING_URI и MLFLOW_MODEL_NAME
+        # из configmap, DB_CONN из секрета
+        env_from=[
+            k8s.V1EnvFromSource(
+                config_map_ref=k8s.V1ConfigMapEnvSource(name="fake-news-api-config")
+            ),
+        ],
         env_vars=[
-            # БЕЗОПАСНАЯ ПЕРЕДАЧА СЕКРЕТА ИЗ K8S
             k8s.V1EnvVar(
                 name="DB_CONN",
                 value_from=k8s.V1EnvVarSource(

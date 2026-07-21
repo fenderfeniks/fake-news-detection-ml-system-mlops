@@ -1,29 +1,27 @@
-# airflow-values.yaml
-
-# Используем KubernetesExecutor для запуска тасок в изолированных подах
 executor: "KubernetesExecutor"
 
-# Настройки веб-интерфейса и создание дефолтного админа
 webserver:
   defaultUser:
     enabled: true
     role: Admin
     username: admin
+    # TODO: заменить на секрет перед продом
     password: admin
     firstName: Admin
     lastName: User
     email: admin@example.com
 
-# Настройки для загрузки DAG'ов (пока заготовки под GitSync)
 dags:
   gitSync:
     enabled: true
-    # Раскомментируй и заполни, когда зальешь код в Git:
     repo: https://github.com/fenderfeniks/fake-news-detection-ml-system-mlops.git
     branch: master
     subPath: dags
 
 config:
   kubernetes_executor:
-    delete_worker_pods: 'False'
+    # ИСПРАВЛЕНО: согласовано с is_delete_operator_pod=True в операторах
+    # При успехе — поды удаляются (экономим ресурсы)
+    # При падении — оставляем для дебага
+    delete_worker_pods: 'True'
     delete_worker_pods_on_failure: 'False'

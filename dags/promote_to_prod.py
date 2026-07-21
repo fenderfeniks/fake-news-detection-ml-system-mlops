@@ -25,7 +25,7 @@ DEFAULT_CONFIG = {
 }
 
 # ИСПРАВЛЕНИЕ: Передаем default_var
-CONFIG = Variable.get("training_config", default_var=DEFAULT_CONFIG, deserialize_json=True)
+CONFIG = Variable.get("promotion_config", default_var=DEFAULT_CONFIG, deserialize_json=True)
 
 default_args = {
     "owner": CONFIG["default_args"]["owner"],
@@ -40,42 +40,30 @@ with DAG(
     catchup=False,
     tags=["nlp", "mlops", "production"],
 ) as dag:
-    promote_weights = KubernetesPodOperator(
-        task_id="copy_weights_to_prod",
-        name="promote-weights-pod",
+    promote_model = KubernetesPodOperator(
+        task_id="promote_staging_to_prod",
+        name="promote-model-pod",
         namespace=NAMESPACE,
         image=IMAGE,
-        cmds=["bash", "-c"],
-        # ИСПРАВЛЕНИЕ: Безопасное копирование с созданием директории prod
-        arguments=[
-            f"mkdir -p {CONFIG['mount_path']}/prod && cp {CONFIG['mount_path']}/staging/best.ckpt {CONFIG['mount_path']}/prod/best.ckpt && echo 'Weights promoted!'"
-        ],
-        volume_mounts=[k8s.V1VolumeMount(name="model-weights", mount_path=CONFIG["mount_path"])],
-        volumes=[
-            k8s.V1Volume(
-                name="model-weights",
-                persistent_volume_claim=k8s.V1PersistentVolumeClaimVolumeSource(
-                    claim_name=CONFIG["pvc_name"]
-                ),
-            )
+        cmds=["python", "-m", "src.jobs.promote"],
+        service_account_name="airflow-worker-sa",
+        env_from=[
+            k8s.V1EnvFromSource(
+                config_map_ref=k8s.V1ConfigMapEnvSource(name="fake-news-api-config")
+            ),
         ],
         get_logs=True,
         is_delete_operator_pod=True,
-        # ИСПРАВЛЕНИЕ: Подключаем сервисный аккаунт
-        service_account_name="airflow-worker-sa",
     )
 
     restart_api = KubernetesPodOperator(
         task_id="restart_api_deployment",
         name="restart-api-pod",
         namespace=NAMESPACE,
-        image="bitnami/kubectl:latest",
-        # ИСПРАВЛЕНИЕ: Исправлено имя деплоймента на то, которое задано в K8s манифестах
+        image="bitnami/kubectl:1.29",
         cmds=["kubectl", "rollout", "restart", "deployment/fake-news-api", "-n", NAMESPACE],
         get_logs=True,
         is_delete_operator_pod=True,
-        # ИСПРАВЛЕНИЕ: Подключаем сервисный аккаунт (критично для kubectl)
         service_account_name="airflow-worker-sa",
     )
-
-    promote_weights >> restart_api
+    promote_model >> restart_api
