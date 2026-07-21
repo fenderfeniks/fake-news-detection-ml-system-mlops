@@ -38,12 +38,12 @@ spec:
           mountPath: /app/logs
         resources:
           requests:
-            cpu: "2"
-            memory: "8Gi"
+            cpu: "0.5"
+            memory: "2Gi"
           limits:
-            cpu: "4"
-            memory: "16Gi"
-            nvidia.com/gpu: "1"
+            cpu: "1"
+            memory: "4Gi"
+            #nvidia.com/gpu: "1"
         readinessProbe:
           httpGet:
             path: /health

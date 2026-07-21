@@ -5,7 +5,6 @@
 """
 
 import logging
-import os
 from pathlib import Path
 
 import hydra
@@ -113,22 +112,22 @@ def train(cfg: DictConfig) -> None:
             pip_requirements = get_inference_pip_requirements(pyproject_path)
 
             mlflow.set_tracking_uri(cfg.logger.tracking_uri)
-            with mlflow.start_run(run_id=trainer.logger._run_id):
-                model_info = mlflow.transformers.log_model(
-                    transformers_model={"model": model_to_save, "tokenizer": tokenizer},
-                    name="model",
-                    task="text-classification",
-                    registered_model_name=reg_model_name,
-                    pip_requirements=pip_requirements or None,
-                )
-                mv_version = model_info.registered_model_version
-                logger.info(
-                    f"Модель зарегистрирована в реестре под именем '{reg_model_name}', "
-                    f"Версия: {mv_version}"
-                )
 
-                if best_score is not None:
-                    mlflow.log_metric("promotion_candidate_score", best_score)
+            model_info = mlflow.transformers.log_model(
+                transformers_model={"model": model_to_save, "tokenizer": tokenizer},
+                name="model",
+                task="text-classification",
+                registered_model_name=reg_model_name,
+                pip_requirements=pip_requirements or None,
+            )
+            mv_version = model_info.registered_model_version
+            logger.info(
+                f"Модель зарегистрирована в реестре под именем '{reg_model_name}', "
+                f"Версия: {mv_version}"
+            )
+
+            if best_score is not None:
+                mlflow.log_metric("promotion_candidate_score", best_score)
 
             # 4. Присваиваем алиас Production, только если новая версия
             #    не хуже текущей Production (или Production ещё нет).
@@ -158,7 +157,7 @@ def train(cfg: DictConfig) -> None:
                     client.set_model_version_tag(
                         reg_model_name, mv_version, "val_f1", str(best_score)
                     )
-                logger.info(f"🚀 Версии {mv_version} присвоен алиас 'Production'!")
+                logger.info(f" Версии {mv_version} присвоен алиас 'Production'!")
             else:
                 logger.info(
                     f"Версия {mv_version} не превзошла текущий Production "

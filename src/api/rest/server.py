@@ -51,15 +51,23 @@ def create_app(load_ml: bool = True) -> FastAPI:
 
         if load_ml:
             logger.info("Загрузка ML модели классификации в видеопамять...")
-            classifier = NLPPipeline(config_name="main")
-            app.state.ml_models["classifier"] = classifier
+            try:
+                classifier = NLPPipeline(config_name="main")
+                app.state.ml_models["classifier"] = classifier
+                logger.info("ML модель загружена успешно.")
+            except Exception as e:
+                logger.warning(f"Не удалось загрузить ML модель: {e}. API запустится без неё.")
+                app.state.ml_models["classifier"] = None
 
             bot_token = os.getenv("TG_BOT_TOKEN") or cfg.api.telegram.bot_token
             if bot_token:
                 bot = get_webhook_bot(bot_token)
                 app.state.tg_bot = bot
-                webhook_url = cfg.api.telegram.webhook_url
-                await bot.set_webhook(url=webhook_url, drop_pending_updates=True)
+                try:
+                    webhook_url = cfg.api.telegram.webhook_url
+                    await bot.set_webhook(url=webhook_url, drop_pending_updates=True)
+                except Exception as e:
+                    logger.warning(f"Не удалось установить вебхук: {e}")
 
         yield
 

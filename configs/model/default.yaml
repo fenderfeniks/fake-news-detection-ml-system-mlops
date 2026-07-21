@@ -3,7 +3,7 @@ defaults:
   - _self_
   - architecture: rubert_base
   # По умолчанию ставим обучение только головы, это самый частый и безопасный старт
-  - finetuning: head_only 
+  - finetuning: lora
 
 model_name: ???
 

@@ -4,8 +4,8 @@
     "pvc_name": "pvc-data",
     "mount_path": "/app/data",
     "resources": {
-      "requests": {"cpu": "2", "memory": "4Gi"},
-      "limits": {"cpu": "4", "memory": "8Gi"}
+      "requests": {"cpu": "0.5", "memory": "1Gi"},
+      "limits": {"cpu": "1", "memory": "2Gi"}
     },
     "default_args": {
       "owner": "ml_team",
@@ -18,8 +18,8 @@
     "schedule": "0 8 * * *",
     "db_secret_name": "analytics-db-secrets",
     "resources": {
-      "requests": {"cpu": "2", "memory": "4Gi"},
-      "limits": {"cpu": "4", "memory": "8Gi"}
+      "requests": {"cpu": "0.5", "memory": "1Gi"},
+      "limits": {"cpu": "1", "memory": "2Gi"}
     },
     "default_args": {
       "owner": "ml_team",
@@ -34,8 +34,8 @@
     "pvc_name": "pvc-models",
     "mount_path": "/app/models",
     "resources": {
-      "requests": {"cpu": "2", "memory": "8Gi"},
-      "limits": {"cpu": "4", "memory": "16Gi", "nvidia.com/gpu": "1"}
+      "requests": {"cpu": "0.5", "memory": "1Gi"},
+      "limits": {"cpu": "1", "memory": "2Gi"}
     },
     "default_args": {
       "owner": "ml_team",
@@ -47,11 +47,11 @@
   "maintenance_config": {
     "schedule": "0 3 * * 0",
     "retention_days": 30,
-    "mlruns_pvc_name": "pvc-mlruns",
-    "mlruns_mount_path": "/app/mlruns",
+    "mlruns_pvc_name": "logs-pvc",
+    "mlruns_mount_path": "/app/logs",
     "resources": {
-      "requests": {"cpu": "1", "memory": "2Gi"},
-      "limits": {"cpu": "2", "memory": "4Gi"}
+      "requests": {"cpu": "0.5", "memory": "1Gi"},
+      "limits": {"cpu": "1", "memory": "2Gi"}
     },
     "default_args": {
       "owner": "ml_team",
@@ -65,12 +65,8 @@
     "pvc_name": "pvc-models",
     "mount_path": "/app/models",
     "resources": {
-      "requests": {"cpu": "4", "memory": "16Gi"},
-      "limits": {
-        "cpu": "8",
-        "memory": "32Gi",
-        "nvidia.com/gpu": "1"
-      }
+      "requests": {"cpu": "0.5", "memory": "1Gi"},
+      "limits": {"cpu": "1", "memory": "2Gi"}
     },
     "default_args": {
       "owner": "ml_team",

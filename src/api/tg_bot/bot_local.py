@@ -25,6 +25,7 @@ def main(cfg: DictConfig) -> None:
     OmegaConf.resolve(cfg)
 
     bot_token = os.getenv("TG_BOT_TOKEN") or cfg.api.telegram.bot_token
+    logger.info(f"Используется токен: {bot_token[:10]}...")
     if not bot_token:
         raise ValueError("Критическая ошибка: TG_BOT_TOKEN не найден ни в .env, ни в конфигурации!")
 
@@ -41,7 +42,10 @@ def main(cfg: DictConfig) -> None:
         await bot.delete_webhook(drop_pending_updates=True)
 
         logger.info("Запуск локального бота в режиме Polling...")
-        await dp.start_polling(bot, cfg=cfg, api_url=api_url)
+        # Передаем данные через workflow_data диспетчера
+        dp["cfg"] = cfg
+        dp["api_url"] = api_url
+        await dp.start_polling(bot)
 
     asyncio.run(start_polling())
 

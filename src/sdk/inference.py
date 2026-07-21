@@ -126,14 +126,25 @@ class NLPPipeline:
         else:
             raise ValueError("Модель не вернула logits. Проверьте конфигурацию архитектуры.")
 
-        preds = torch.argmax(probs, dim=-1)
+        # Читаем порог из конфига Hydra (по умолчанию 0.5)
+        threshold = self.cfg.get("inference", {}).get("threshold", 0.5)
 
         results = []
-        for prob, pred in zip(probs, preds, strict=False):
+        for prob in probs:
+            prob_fake = prob[1].item()
+
+            # Применяем бизнес-логику порога
+            if prob_fake >= threshold:
+                pred = 1
+                conf = prob_fake
+            else:
+                pred = 0
+                conf = prob[0].item()
+
             results.append(
                 {
-                    "label_id": pred.item(),
-                    "confidence": round(prob[pred].item(), 4),
+                    "label_id": pred,
+                    "confidence": round(conf, 4),
                     "all_probabilities": [round(p, 4) for p in prob.cpu().tolist()],
                 }
             )

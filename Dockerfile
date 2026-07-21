@@ -20,6 +20,7 @@ RUN uv venv /opt/venv
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --python /opt/venv/bin/python \
     --extra-index-url https://download.pytorch.org/whl/cu121 \
+    --index-strategy unsafe-best-match \
     ".[${INSTALL_EXTRAS}]"
 
 # ==========================================

@@ -47,7 +47,7 @@ lightning_logs/
 *.pth
 *.ckpt
 *.safetensors
-models/
+/models/
 
 # Hugging Face Datasets
 .cache/

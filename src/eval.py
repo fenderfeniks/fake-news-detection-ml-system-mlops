@@ -36,10 +36,16 @@ def evaluate(cfg: DictConfig) -> None:
     ckpt_path = cfg.get("ckpt_path")
 
     if ckpt_path:
-        logger.info(f"Загрузка PL чекпоинта из: {ckpt_path}")
+        logger.info(f"Загрузка кастомного PL чекпоинта из: {ckpt_path}")
         register_safe_globals()
+    elif getattr(model_builder, "loaded_from_mlflow", False):
+        logger.info(
+            "Модель успешно загружена из MLflow Production. Запуск оценки на скачанных весах."
+        )
     else:
-        logger.warning("Путь к чекпоинту не передан. Запуск оценки на случайных весах.")
+        logger.warning(
+            "Модель не из MLflow и путь к чекпоинту не передан. Запуск оценки на базовых весах."
+        )
 
     logger.info("Старт процесса оценки...")
     # Метод test() сам загрузит стейты из .ckpt и подменит веса в model_module

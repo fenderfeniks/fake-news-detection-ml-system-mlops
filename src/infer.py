@@ -1,3 +1,4 @@
+# src/infer.py
 import logging
 import os
 
@@ -72,15 +73,25 @@ def infer(cfg: DictConfig) -> None:
         outputs = model(**inputs)
         logits = outputs.logits
 
-        # Получаем вероятности (через softmax, если нужно) и финальный класс
+        # Получаем вероятности (через softmax, если нужно)
         probabilities = torch.softmax(logits, dim=-1)
-        predicted_class_id = torch.argmax(probabilities, dim=-1).item()
-        confidence = probabilities[0][predicted_class_id].item()
+
+        # --- ИНТЕГРАЦИЯ БИЗНЕС-ЛОГИКИ ---
+        threshold = cfg.get("inference", {}).get("threshold", 0.5)
+        prob_fake = probabilities[0][1].item()  # Вероятность, что это фейк
+
+        if prob_fake >= threshold:
+            predicted_class_id = 1
+            confidence = prob_fake
+        else:
+            predicted_class_id = 0
+            confidence = probabilities[0][0].item()
 
     print("\n" + "=" * 50)
     print(f"Текст: {query}")
     print(f"Предсказанный класс ID: {predicted_class_id}")
     print(f"Уверенность модели: {confidence:.4f}")
+    print(f"Используемый порог (Threshold): {threshold}")
     print("=" * 50 + "\n")
 
 

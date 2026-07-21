@@ -17,7 +17,9 @@ project_name: "fake_news_detector" # Обновлено под конкретн�
 model_module:
   _target_: src.training.module.NLPModel
   num_classes: 2  
-  
+  target_precision: 0.95
+  target_recall: null
+
   optimizer_cfg:
     _target_: torch.optim.AdamW
     _partial_: true
@@ -29,6 +31,10 @@ datamodule:
   _target_: src.core.data.NLPDataModule
   _recursive_: false
   data_cfg: ${data}
+
+
+inference:
+  threshold: 0.5
 
 # --- Настройка логирования и рабочей директории Гидры ---
 hydra:

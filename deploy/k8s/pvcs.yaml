@@ -5,8 +5,9 @@ metadata:
   name: pvc-models
   namespace: ml-pipelines
 spec:
+  storageClassName: hostpath
   accessModes:
-    - ReadWriteMany 
+    - ReadWriteOnce  # заменить ReadWriteMany → ReadWriteOnce (локально RWX не поддерживается) 
   resources:
     requests:
       storage: 50Gi 
@@ -19,8 +20,9 @@ metadata:
   name: pvc-data
   namespace: ml-pipelines
 spec:
+  storageClassName: hostpath
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce  # заменить ReadWriteMany → ReadWriteOnce (локально RWX не поддерживается)
   resources:
     requests:
       storage: 20Gi
@@ -33,8 +35,9 @@ metadata:
   name: logs-pvc
   namespace: ml-pipelines
 spec:
+  storageClassName: hostpath
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce  # заменить ReadWriteMany → ReadWriteOnce (локально RWX не поддерживается)
   resources:
     requests:
       storage: 10Gi

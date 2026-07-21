@@ -33,6 +33,7 @@ def format_prediction(label_id: int, confidence: float) -> str:
 @router.message(CommandStart())
 async def cmd_start(message: types.Message, state: FSMContext, cfg):
     """Обработка команды /start."""
+    logger.info(f"Получено сообщение: {message.text}")
     await state.set_state(ChatProcess.chatting)
     await message.answer(
         text=cfg.api.telegram.messages.welcome,
@@ -48,6 +49,7 @@ async def process_chat_message(
     classifier=None,
     api_url=None,
 ):
+    logger.info(f"Получено сообщение: {message.text}")
     processing_msg = await message.answer("Анализирую текст...")
 
     try:

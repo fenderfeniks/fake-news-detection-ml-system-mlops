@@ -42,6 +42,8 @@ class ModelModuleConfig:
     _target_: str
     num_classes: int
     optimizer_cfg: OptimizerConfig
+    target_precision: float | None = None
+    target_recall: float | None = None
 
 
 @dataclass
@@ -49,6 +51,11 @@ class RootDataModuleConfig:
     _target_: str
     data_cfg: Any
     _recursive_: bool = False
+
+
+@dataclass
+class InferenceConfig:
+    threshold: float
 
 
 @dataclass
@@ -228,3 +235,4 @@ class ConfigSchema:
     datamodule: RootDataModuleConfig
     hydra: HydraConfig
     optuna: OptunaConfig | None = None
+    inference: InferenceConfig | None = None
