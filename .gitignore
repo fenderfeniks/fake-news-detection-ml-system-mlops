@@ -63,7 +63,7 @@ hf_cache/
 kaggle.json
 *token*
 *.key
-k8s/secrets.yaml
+deploy/k8s/secrets.yaml
 
 # ==============================
 # 5. Тестирование и Линтеры
