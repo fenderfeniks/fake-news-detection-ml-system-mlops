@@ -22,3 +22,8 @@ dags:
     repo: https://github.com/fenderfeniks/fake-news-detection-ml-system-mlops.git
     branch: master
     subPath: dags
+
+config:
+  kubernetes_executor:
+    delete_worker_pods: 'False'
+    delete_worker_pods_on_failure: 'False'
