@@ -20,13 +20,13 @@ builder:
   cache_dir: "${paths.hf_cache_dir}"
   trust_remote_code: False
   auto_model_class: "transformers.AutoModelForSequenceClassification" 
-  torch_dtype: "auto"
+  dtype: "float32"
   num_labels: 2
   finetuning_type: ${model.finetuning.type}
   peft_config: ${model.finetuning.peft_config}
   
   # Интеграция с MLflow
-  use_mlflow_registry: True
+  use_mlflow_registry: False
   mlflow_tracking_uri: ${logger.tracking_uri}
   mlflow_model_name: "FakeNewsDetector"
   mlflow_model_alias: "Production"

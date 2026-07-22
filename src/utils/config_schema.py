@@ -44,6 +44,7 @@ class ModelModuleConfig:
     optimizer_cfg: OptimizerConfig
     target_precision: float | None = None
     target_recall: float | None = None
+    class_weights: list[float] | None = None
 
 
 @dataclass
@@ -74,7 +75,7 @@ class ModelBuilderConfig:
     cache_dir: str
     trust_remote_code: bool
     auto_model_class: str
-    torch_dtype: str
+    dtype: str
     num_labels: int
     finetuning_type: str
     quantization_config: Any | None = None
@@ -132,6 +133,28 @@ class DataSourceConfig:
 
 
 @dataclass
+class BalancingSamplerConfig:
+    enabled: bool = False
+    replacement: bool = False
+
+
+@dataclass
+class BalancingUndersamplingConfig:
+    enabled: bool = False
+    target_ratio: float = 2.0
+
+
+@dataclass
+class BalancingConfig:
+    # "auto" | список [w0, w1] | None
+    class_weights: Any = "auto"
+    sampler: BalancingSamplerConfig = field(default_factory=BalancingSamplerConfig)
+    undersampling: BalancingUndersamplingConfig = field(
+        default_factory=BalancingUndersamplingConfig
+    )
+
+
+@dataclass
 class DataConfig:
     source: DataSourceConfig
     max_length: int
@@ -147,6 +170,9 @@ class DataConfig:
     text_column: str | None = None
     target_column: str | None = None
     stratify_column: str | None = None
+    dataset_name: str | None = None
+    force_reprocess: bool = False
+    balancing: BalancingConfig = field(default_factory=BalancingConfig)
 
 
 @dataclass

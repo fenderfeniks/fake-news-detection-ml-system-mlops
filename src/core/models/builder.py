@@ -19,7 +19,7 @@ class HFModelBuilder:
         cache_dir: Optional[str] = None,
         quantization_config: Optional[Any] = None,
         trust_remote_code: bool = False,
-        torch_dtype: str = "auto",
+        dtype: str = "auto",
         peft_config: Optional[Any] = None,
         num_labels: int = 2,
         finetuning_type: str = "full",
@@ -34,7 +34,7 @@ class HFModelBuilder:
         self.cache_dir = cache_dir
         self.quantization_config = quantization_config
         self.trust_remote_code = trust_remote_code
-        self.torch_dtype = torch_dtype
+        self.dtype = dtype
         self.peft_config = peft_config
         self.num_labels = num_labels
         self.finetuning_type = finetuning_type
@@ -111,7 +111,7 @@ class HFModelBuilder:
 
             bnb_config = BitsAndBytesConfig(**quant_dict)
 
-        parsed_dtype = getattr(torch, self.torch_dtype) if self.torch_dtype != "auto" else "auto"
+        parsed_dtype = getattr(torch, self.dtype) if self.dtype != "auto" else "auto"
 
         if bnb_config is not None:
             device_map = {"": torch.cuda.current_device()} if torch.cuda.is_available() else "cpu"
@@ -124,7 +124,7 @@ class HFModelBuilder:
             cache_dir=self.cache_dir,
             quantization_config=bnb_config,
             trust_remote_code=self.trust_remote_code,
-            torch_dtype=parsed_dtype,
+            dtype=parsed_dtype,
             device_map=device_map,
         )
 

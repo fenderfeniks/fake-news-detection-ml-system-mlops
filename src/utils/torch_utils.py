@@ -1,16 +1,4 @@
-"""
-Утилиты для безопасной загрузки PyTorch/Lightning чекпоинтов.
-
-Начиная с PyTorch 2.6 дефолтное значение `weights_only` в `torch.load`
-изменено на `True`. Чекпоинты PyTorch Lightning (.ckpt) содержат не
-только веса модели, но и состояние оптимизатора, LR-шедулера и т.д. —
-эти объекты не входят в белый список безопасных глобалов по умолчанию,
-поэтому загрузка падает с `UnpicklingError`.
-
-Эта утилита регистрирует классы, которые реально встречаются в наших
-чекпоинтах, как доверенные глобалы. Используется в train.py и eval.py
-перед любой загрузкой .ckpt файлов.
-"""
+# src/utils/torch_utils.py
 
 import functools
 import logging
@@ -22,17 +10,40 @@ logger = logging.getLogger(__name__)
 
 
 def register_safe_globals() -> None:
-    """
-    Регистрирует классы, необходимые для загрузки Lightning-чекпоинтов
-    через `torch.load(..., weights_only=True)`.
-
-    Вызывать один раз до первого `torch.load` / `load_from_checkpoint`
-    в процессе (train.py, eval.py).
-    """
     safe_classes = [
         functools.partial,
         torch.optim.AdamW,
     ]
+
+    # OmegaConf — все типы которые могут попасть в чекпоинт через save_hyperparameters
+    try:
+        from omegaconf import DictConfig, ListConfig
+        from omegaconf.base import ContainerMetadata, Metadata
+        from omegaconf.nodes import (
+            AnyNode,
+            BooleanNode,
+            EnumNode,
+            FloatNode,
+            IntegerNode,
+            StringNode,
+        )
+
+        safe_classes.extend(
+            [
+                ListConfig,
+                DictConfig,
+                ContainerMetadata,
+                Metadata,
+                AnyNode,
+                IntegerNode,
+                FloatNode,
+                BooleanNode,
+                StringNode,
+                EnumNode,
+            ]
+        )
+    except ImportError:
+        pass
 
     try:
         import torch.optim.lr_scheduler as lr_scheduler
@@ -52,6 +63,6 @@ def register_safe_globals() -> None:
 
     torch.serialization.add_safe_globals(safe_classes)
     logger.debug(
-        f"Зарегистрированы safe globals для torch.load: "
+        f"Зарегистрированы safe globals: "
         f"{[c.__name__ if hasattr(c, '__name__') else str(c) for c in safe_classes]}"
     )

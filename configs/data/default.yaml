@@ -25,6 +25,9 @@ cleaner:
       pattern: "<.*?>"
       replacement: " "
     - _target_: src.core.data.cleaners.RegexCleaner
+      pattern: "[^\\x20-\\x7E\\u0400-\\u04FF\\n\\t]"
+      replacement: ""
+    - _target_: src.core.data.cleaners.RegexCleaner
       pattern: "\\s+" 
       replacement: " "
 
@@ -45,3 +48,22 @@ dataloader:
 # --- 5. Сам DataModule ---
 datamodule:
   _target_: src.core.data.NLPDataModule
+
+# Стратегия балансировки
+balancing:
+  # Веса классов в loss (null = не использовать)
+  # "auto" = 1/frequency, или явный список [w0, w1]
+  class_weights: "auto"
+  
+  # WeightedRandomSampler (null = не использовать)
+  sampler:
+    enabled: false
+    # replacement: true — с возвратом (oversampling эффект)
+    # replacement: false — без возврата (undersampling эффект)
+    replacement: false
+  
+  # Undersampling мажоритарного класса (null = не использовать)
+  undersampling:
+    enabled: false
+    # Целевое соотношение — 1.0 = полный баланс, 2.0 = 2:1
+    target_ratio: 2.0

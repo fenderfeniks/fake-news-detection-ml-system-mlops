@@ -4,4 +4,4 @@ model_name: "DeepPavlov/rubert-base-cased"
 
 builder:
   auto_model_class: "transformers.AutoModelForSequenceClassification"
-  torch_dtype: "float32"
+  dtype: "float32"

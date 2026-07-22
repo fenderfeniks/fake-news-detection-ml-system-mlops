@@ -23,6 +23,7 @@ class NLPModel(pl.LightningModule):
         num_classes: int = 2,
         target_precision: float | None = None,
         target_recall: float | None = None,
+        class_weights=None,
     ):
         super().__init__()
         self.model = model
@@ -31,8 +32,10 @@ class NLPModel(pl.LightningModule):
         self.num_classes = num_classes
         self.target_precision = target_precision
         self.target_recall = target_recall
+        self.strict_loading = False
+        if class_weights is not None:
+            class_weights = list(class_weights)
 
-        # Сохраняем гиперпараметры для логгера, исключая саму модель
         self.save_hyperparameters(ignore=["model"])
 
         # Базовые метрики (считаются по умолчанию с порогом 0.5 через argmax)
@@ -54,6 +57,11 @@ class NLPModel(pl.LightningModule):
         self.test_pr_curve = MulticlassPrecisionRecallCurve(num_classes=num_classes)
         self.test_roc_curve = MulticlassROC(num_classes=num_classes)
 
+        if class_weights is not None:
+            self.register_buffer("class_weights", torch.tensor(class_weights, dtype=torch.float))
+        else:
+            self.class_weights = None
+
     def forward(self, input_ids, attention_mask, labels=None, **kwargs):
         return self.model(
             input_ids=input_ids,
@@ -64,11 +72,18 @@ class NLPModel(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         outputs = self(**batch)
-        loss, logits = outputs.loss, outputs.logits
+        logits = outputs.logits
+
+        # Если веса заданы — используем явный CrossEntropy
+        # Если нет — используем loss из модели (он без весов)
+        if self.class_weights is not None:
+            loss_fn = torch.nn.CrossEntropyLoss(weight=self.class_weights.to(logits.device))
+            loss = loss_fn(logits, batch["labels"])
+        else:
+            loss = outputs.loss
 
         preds = torch.argmax(logits, dim=1)
         self.train_metrics.update(preds, batch["labels"])
-
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log_dict(self.train_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True)
         return loss

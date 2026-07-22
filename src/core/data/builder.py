@@ -13,7 +13,9 @@ import os
 import json
 import hashlib
 from typing import Any, Optional
-
+import torch
+from torch.utils.data import WeightedRandomSampler
+import numpy as np
 import pytorch_lightning as pl
 from omegaconf import OmegaConf
 from hydra.utils import instantiate
@@ -55,6 +57,94 @@ class NLPDataModule(pl.LightningDataModule):
             self.data_cfg.paths.processed_data_dir, 
             f"{dataset_name}_cleaned_{config_hash}"
         )
+
+
+    def _compute_class_weights(self, labels: list[int]) -> torch.Tensor:
+        """
+        Вычисляет веса классов как 1 / frequency.
+        Нормализует так чтобы среднее = 1.0 (стабильнее для lr).
+        """
+        counts = np.bincount(labels)
+        weights = 1.0 / counts
+        weights = weights / weights.mean()  # нормализация
+        logger.info(
+            f"Веса классов: " +
+            ", ".join(f"класс {i}: {w:.3f}" for i, w in enumerate(weights))
+        )
+        return torch.tensor(weights, dtype=torch.float)
+    
+
+    def _make_sampler(
+        self, labels: list[int], replacement: bool
+    ) -> WeightedRandomSampler:
+        """
+        WeightedRandomSampler — каждый пример тянется с вероятностью
+        обратно пропорциональной частоте его класса.
+        replacement=False → undersampling (мажоритарный класс режется)
+        replacement=True  → oversampling (миноритарный класс дублируется)
+        """
+        counts = np.bincount(labels)
+        class_weights = 1.0 / counts
+        sample_weights = torch.tensor(
+            [class_weights[label] for label in labels],
+            dtype=torch.float
+        )
+
+        # replacement=False: num_samples = 2 * min_class_count
+        # replacement=True:  num_samples = len(dataset) как обычно
+        if not replacement:
+            num_samples = int(counts.min() * len(counts))
+            logger.info(
+                f"Undersampling через WeightedRandomSampler: "
+                f"{num_samples} примеров на эпоху "
+                f"(исходно {len(labels)})"
+            )
+        else:
+            num_samples = len(labels)
+
+        return WeightedRandomSampler(
+            weights=sample_weights,
+            num_samples=num_samples,
+            replacement=replacement,
+        )
+
+
+    def _apply_undersampling(
+        self, dataset, labels: list[int], target_ratio: float
+    ):
+        """
+        Явный undersampling: случайно выбрасывает примеры мажоритарного
+        класса до target_ratio. target_ratio=2.0 → класс0 : класс1 = 2:1
+        """
+        counts = np.bincount(labels)
+        min_class = counts.argmin()
+        min_count = counts[min_class]
+        labels_array = np.array(labels)
+
+        keep_indices = []
+        for cls in range(len(counts)):
+            cls_indices = np.where(labels_array == cls)[0]
+            if cls == min_class:
+                keep_indices.extend(cls_indices.tolist())
+            else:
+                # Сколько оставить мажоритарного
+                keep_count = int(min_count * target_ratio)
+                kept = np.random.choice(
+                    cls_indices, size=keep_count, replace=False
+                )
+                keep_indices.extend(kept.tolist())
+
+        np.random.shuffle(keep_indices)
+        logger.info(
+            f"Undersampling: {len(labels)} → {len(keep_indices)} примеров. "
+            f"Новый баланс: " +
+            ", ".join(
+                f"класс {i}: {np.sum(labels_array[keep_indices] == i)}"
+                for i in range(len(counts))
+            )
+        )
+        return dataset.select(keep_indices)
+    
 
     def prepare_data(self) -> None:
         """
@@ -116,33 +206,61 @@ class NLPDataModule(pl.LightningDataModule):
         processed_dataset.save_to_disk(self.processed_dir)
         logger.info(f"Данные успешно очищены и сохранены в {self.processed_dir}")
 
-    def setup(self, stage: Optional[str] = None) -> None:
-        """
-        Загружает обработанные данные с диска в память текущего процесса.
-        """
+    def setup(self, stage=None):
         processed_dataset = load_from_disk(self.processed_dir)
-        
-        if stage == "fit" or stage is None:
-            self.train_dataset = processed_dataset["train"]
-            self.val_dataset = processed_dataset["validation"]
-        
-        if stage == "validate" or stage is None:
+        balancing_cfg = self.data_cfg.get("balancing", {})
+
+        if stage in ("fit", None):
+            train_ds = processed_dataset["train"]
+            labels = train_ds[self.data_cfg.target_column]
+
+            undersampling_cfg = balancing_cfg.get("undersampling", {})
+            if undersampling_cfg and undersampling_cfg.get("enabled", False):
+                train_ds = self._apply_undersampling(
+                    train_ds, labels,
+                    undersampling_cfg.get("target_ratio", 2.0),
+                )
+                labels = train_ds[self.data_cfg.target_column]
+
+            self.train_dataset = train_ds
+
+            sampler_cfg = balancing_cfg.get("sampler", {})
+            if sampler_cfg and sampler_cfg.get("enabled", False):
+                self.train_sampler = self._make_sampler(
+                    labels, replacement=sampler_cfg.get("replacement", False)
+                )
+            else:
+                self.train_sampler = None
+
+            class_weights_cfg = balancing_cfg.get("class_weights")
+            if class_weights_cfg == "auto":
+                self.class_weights = self._compute_class_weights(labels)
+            elif isinstance(class_weights_cfg, list):
+                self.class_weights = torch.tensor(class_weights_cfg, dtype=torch.float)
+            else:
+                self.class_weights = None
+
+            # ИСПРАВЛЕНО: val_dataset инициализируется всегда в fit
             self.val_dataset = processed_dataset["validation"]
 
-        if stage == "test" or stage is None:
+        # ДОБАВЛЕНО: отдельный блок для stage="validate"
+        if stage == "validate":
+            self.val_dataset = processed_dataset["validation"]
+
+        if stage in ("test", None):
             self.test_dataset = processed_dataset["test"]
 
         self.collator = instantiate(
-            self.data_cfg.collator, 
-            tokenizer=self.tokenizer
+            self.data_cfg.collator, tokenizer=self.tokenizer
         )
 
-    def train_dataloader(self) -> Any:
+    def train_dataloader(self):
         return instantiate(
             self.data_cfg.dataloader,
             dataset=self.train_dataset,
             collate_fn=self.collator,
-            shuffle=True
+            shuffle=self.train_sampler is None,  # shuffle только если нет sampler
+            sampler=self.train_sampler,
         )
 
     def val_dataloader(self) -> Any:

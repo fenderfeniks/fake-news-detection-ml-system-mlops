@@ -54,19 +54,33 @@ def train(cfg: DictConfig) -> None:
     model_builder = hydra.utils.instantiate(cfg.model.builder, tokenizer=tokenizer)
     base_model = model_builder.build()
 
-    # 5. Инициализация LightningModule
-    logger.info("Инициализация PyTorch Lightning Module...")
-    model_module = hydra.utils.instantiate(cfg.model_module, model=base_model)
-
-    # 6. Инициализация DataModule
+    # 5. Инициализация DataModule
     logger.info("Инициализация DataModule...")
     datamodule = hydra.utils.instantiate(cfg.datamodule, tokenizer=tokenizer)
 
-    # 7. Сборка PyTorch Lightning Trainer
+    # ИСПРАВЛЕНО: сначала prepare_data (скачивает и кэширует датасет),
+    # потом setup (загружает из кэша и вычисляет class_weights)
+    datamodule.prepare_data()
+    datamodule.setup(stage="fit")
+
+    class_weights = getattr(datamodule, "class_weights", None)
+    if class_weights is not None:
+        logger.info(f"Веса классов из DataModule: {class_weights.tolist()}")
+
+    # 6. Инициализация LightningModule — ПОСЛЕ DataModule, передаём веса
+    logger.info("Инициализация PyTorch Lightning Module...")
+    model_module = hydra.utils.instantiate(
+        cfg.model_module,
+        model=base_model,
+        class_weights=class_weights.tolist() if class_weights is not None else None,
+    )
+
+    # 7. Сборка PyTorch Lightning Trainer (номера сдвинулись)
     logger.info("Инициализация PyTorch Lightning Trainer...")
     trainer = hydra.utils.instantiate(cfg.trainer)
 
-    # 8. Запуск обучения!
+    # 8. Запуск обучения — trainer.fit НЕ вызывает setup повторно
+    # если он уже был вызван, Lightning это отслеживает
     logger.info("Старт тренировочного цикла...")
     try:
         trainer.fit(model=model_module, datamodule=datamodule)
