@@ -1,0 +1,7 @@
+# @package model
+
+model_name: "google-bert/bert-base-multilingual-cased"
+
+builder:
+  auto_model_class: "transformers.AutoModelForSequenceClassification"
+  dtype: "float32"

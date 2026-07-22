@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 from dotenv import load_dotenv
@@ -33,9 +34,20 @@ def evaluate(cfg: DictConfig) -> None:
 
     ckpt_path = cfg.get("ckpt_path")
 
+    # Умная загрузка весов
     if ckpt_path:
-        logger.info(f"Загрузка кастомного PL чекпоинта из: {ckpt_path}")
+        logger.info(f"Загрузка кастомного чекпоинта из: {ckpt_path}")
         register_safe_globals()
+
+        # Если это LoRA папкa или raw state_dict, загружаем in-place до запуска trainer.test
+        if os.path.isdir(ckpt_path) and os.path.exists(
+            os.path.join(ckpt_path, "adapter_config.json")
+        ):
+            from peft import PeftModel
+
+            model_module.model = PeftModel.from_pretrained(model_module.model, ckpt_path)
+            ckpt_path = None  # Сбрасываем, так как веса уже в памяти
+
     elif getattr(model_builder, "loaded_from_mlflow", False):
         logger.info("Модель успешно загружена из MLflow Production.")
     else:
@@ -45,29 +57,12 @@ def evaluate(cfg: DictConfig) -> None:
     results = trainer.test(model=model_module, datamodule=datamodule, ckpt_path=ckpt_path)
     logger.info("Оценка завершена.")
 
-    # ДОБАВЛЕНО: проверка порога и сигнал для Airflow
-    # trainer.test() возвращает список словарей с метриками — берём первый
-    if results:
-        metrics = results[0]
-        # Ключ метрики — тот же что логирует твой LightningModule в test_step
-        # Подставь свой: "test_f1", "test_accuracy" и т.д.
-        primary_metric = metrics.get("test_f1") or metrics.get("test_accuracy")
-        drift_threshold = cfg.get("drift_threshold")
+    # Используем выделенную функцию
+    drift_threshold = cfg.get("drift_threshold")
+    metric_key = cfg.get("drift_metric_key", "test_f1")
 
-        if primary_metric is not None and drift_threshold is not None:
-            logger.info(f"Метрика: {primary_metric:.4f}, порог: {drift_threshold}")
-            if primary_metric < drift_threshold:
-                logger.error(
-                    f"ДРИФТ ОБНАРУЖЕН: {primary_metric:.4f} < {drift_threshold}. "
-                    "Airflow получит exit code 1 → Slack алерт сработает."
-                )
-                sys.exit(1)
-        else:
-            logger.warning(
-                "Метрика или порог не найдены в конфиге/результатах — "
-                "проверка дрифта пропущена. "
-                f"Доступные метрики: {list(metrics.keys())}"
-            )
+    if drift_threshold is not None:
+        _check_drift(results, drift_threshold=drift_threshold, metric_key=metric_key)
 
 
 def _check_drift(results: list[dict], drift_threshold: float, metric_key: str = "test_f1"):

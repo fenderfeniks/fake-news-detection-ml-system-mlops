@@ -126,6 +126,7 @@ class HFModelBuilder:
             trust_remote_code=self.trust_remote_code,
             dtype=parsed_dtype,
             device_map=device_map,
+            ignore_mismatched_sizes=True,
         )
 
         if self.tokenizer is not None:
@@ -167,12 +168,12 @@ class HFModelBuilder:
 
         elif self.finetuning_type == "head_only":
             logger.info("Режим head_only: замораживаем backbone, оставляем обучаемым только классификатор.")
-            for name, param in model.named_parameters():
-                # Hugging Face обычно называет линейные слои классификатора 'classifier' или 'score'
-                if "classifier" not in name and "score" not in name:
-                    param.requires_grad = False
+            
+            # Надежная заморозка: отключаем градиенты только у базового энкодера
+            for param in model.base_model.parameters():
+                param.requires_grad = False
 
         elif self.finetuning_type == "full":
             logger.info("Режим full: обучаем все веса модели.")
-
+            
         return model

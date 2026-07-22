@@ -38,7 +38,6 @@ class NLPModel(pl.LightningModule):
 
         self.save_hyperparameters(ignore=["model"])
 
-        # Базовые метрики (считаются по умолчанию с порогом 0.5 через argmax)
         metrics = MetricCollection(
             {
                 "acc": MulticlassAccuracy(num_classes=num_classes, average="macro"),
@@ -49,10 +48,8 @@ class NLPModel(pl.LightningModule):
         self.val_metrics = metrics.clone(prefix="val_")
         self.test_metrics = metrics.clone(prefix="test_")
 
-        # Метрика для валидации (используется ТОЛЬКО для быстрого расчета порога)
         self.val_pr_curve = MulticlassPrecisionRecallCurve(num_classes=num_classes)
 
-        # Метрики для финального тестирования (для построения тяжелых графиков)
         self.test_conf_matrix = MulticlassConfusionMatrix(num_classes=num_classes)
         self.test_pr_curve = MulticlassPrecisionRecallCurve(num_classes=num_classes)
         self.test_roc_curve = MulticlassROC(num_classes=num_classes)
@@ -70,19 +67,21 @@ class NLPModel(pl.LightningModule):
             **kwargs,
         )
 
-    def training_step(self, batch, batch_idx):
-        outputs = self(**batch)
+    def _calculate_loss(self, outputs, labels):
+        """Единый метод для расчета функции потерь с учетом весов классов."""
         logits = outputs.logits
-
-        # Если веса заданы — используем явный CrossEntropy
-        # Если нет — используем loss из модели (он без весов)
         if self.class_weights is not None:
             loss_fn = torch.nn.CrossEntropyLoss(weight=self.class_weights.to(logits.device))
-            loss = loss_fn(logits, batch["labels"])
-        else:
-            loss = outputs.loss
+            return loss_fn(logits, labels)
+        return outputs.loss
 
+    def training_step(self, batch, batch_idx):
+        outputs = self(**batch)
+        loss = self._calculate_loss(outputs, batch["labels"])
+
+        logits = outputs.logits
         preds = torch.argmax(logits, dim=1)
+
         self.train_metrics.update(preds, batch["labels"])
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         self.log_dict(self.train_metrics, on_step=False, on_epoch=True, prog_bar=True, logger=True)
@@ -90,11 +89,10 @@ class NLPModel(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         outputs = self(**batch)
-        loss, logits = outputs.loss, outputs.logits
+        loss = self._calculate_loss(outputs, batch["labels"])
 
-        # Для обычных метрик используем argmax (порог 0.5)
+        logits = outputs.logits
         preds = torch.argmax(logits, dim=1)
-        # Для PR-кривой нужны вероятности
         probs = torch.softmax(logits, dim=1)
 
         self.val_metrics.update(preds, batch["labels"])
@@ -104,7 +102,6 @@ class NLPModel(pl.LightningModule):
         self.log_dict(self.val_metrics, on_epoch=True, prog_bar=True, logger=True)
 
     def on_validation_epoch_end(self):
-        """Быстрая математика: динамический поиск порога для целевого класса (без отрисовки)"""
         if (
             getattr(self, "target_precision", None) is not None
             or getattr(self, "target_recall", None) is not None
@@ -135,12 +132,12 @@ class NLPModel(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         outputs = self(**batch)
-        loss, logits = outputs.loss, outputs.logits
+        loss = self._calculate_loss(outputs, batch["labels"])
 
+        logits = outputs.logits
         preds = torch.argmax(logits, dim=1)
         probs = torch.softmax(logits, dim=1)
 
-        # Сбор данных для финальных метрик и графиков
         self.test_metrics.update(preds, batch["labels"])
         self.test_conf_matrix.update(preds, batch["labels"])
         self.test_pr_curve.update(probs, batch["labels"])
@@ -150,9 +147,6 @@ class NLPModel(pl.LightningModule):
         self.log_dict(self.test_metrics, on_epoch=True, prog_bar=True, logger=True)
 
     def on_test_epoch_end(self):
-        """Отрисовка финальных тяжелых графиков в конце тестирования"""
-
-        # Если логгера нет (например, локальный дебаг), пропускаем отрисовку
         if not self.logger or not hasattr(self.logger, "experiment"):
             self.test_conf_matrix.reset()
             self.test_pr_curve.reset()
@@ -162,19 +156,16 @@ class NLPModel(pl.LightningModule):
         mlflow_client = self.logger.experiment
         run_id = self.logger.run_id
 
-        # 1. Отрисовка финальной Confusion Matrix
         fig_cm, ax_cm = self.test_conf_matrix.plot()
         mlflow_client.log_figure(run_id, fig_cm, "metrics_plots/final_confusion_matrix.png")
         plt.close(fig_cm)
         self.test_conf_matrix.reset()
 
-        # 2. Отрисовка финальной PR-кривой
         fig_pr, ax_pr = self.test_pr_curve.plot()
         mlflow_client.log_figure(run_id, fig_pr, "metrics_plots/final_pr_curve.png")
         plt.close(fig_pr)
         self.test_pr_curve.reset()
 
-        # 3. Отрисовка финальной ROC-кривой
         fig_roc, ax_roc = self.test_roc_curve.plot()
         mlflow_client.log_figure(run_id, fig_roc, "metrics_plots/final_roc_curve.png")
         plt.close(fig_roc)

@@ -104,8 +104,13 @@ class NLPPipeline:
 
             if "state_dict" in checkpoint:
                 state_dict = checkpoint["state_dict"]
-                clean_state_dict = {k.replace("model.", ""): v for k, v in state_dict.items()}
-                self.model.load_state_dict(clean_state_dict, strict=False)
+                if "state_dict" in checkpoint:
+                    state_dict = checkpoint["state_dict"]
+                    # Безопасное удаление только ведущего префикса 'model.'
+                    clean_state_dict = {
+                        (k[6:] if k.startswith("model.") else k): v for k, v in state_dict.items()
+                    }
+                    self.model.load_state_dict(clean_state_dict, strict=False)
             else:
                 self.model.load_state_dict(checkpoint, strict=False)
 

@@ -1,0 +1,7 @@
+# @package model
+
+model_name: "dslim/bert-base-NER"
+
+builder:
+  auto_model_class: "transformers.AutoModelForSequenceClassification"
+  dtype: "float32"

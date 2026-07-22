@@ -9,6 +9,7 @@ from pathlib import Path
 
 import hydra
 import pytorch_lightning as pl
+import torch
 from dotenv import load_dotenv
 from omegaconf import DictConfig
 
@@ -79,32 +80,42 @@ def train(cfg: DictConfig) -> None:
     logger.info("Инициализация PyTorch Lightning Trainer...")
     trainer = hydra.utils.instantiate(cfg.trainer)
 
-    # 8. Запуск обучения — trainer.fit НЕ вызывает setup повторно
-    # если он уже был вызван, Lightning это отслеживает
+    # 8. Запуск обучения
     logger.info("Старт тренировочного цикла...")
     try:
         trainer.fit(model=model_module, datamodule=datamodule)
         logger.info("Обучение успешно завершено!")
 
-        # --- ИНТЕГРАЦИЯ С MLFLOW MODEL REGISTRY ---
         best_ckpt_path = trainer.checkpoint_callback.best_model_path
         if best_ckpt_path:
+            # === ЭЛЕГАНТНОЕ РЕШЕНИЕ (0 RAM OVERHEAD) ===
+            # Загружаем лучшие веса напрямую в существующий объект модели.
+            # Тензоры просто перезапишутся in-place.
+            register_safe_globals()
+            logger.info("Загрузка лучших весов в память...")
+            checkpoint = torch.load(
+                best_ckpt_path, map_location=model_module.device, weights_only=False
+            )
+            model_module.load_state_dict(checkpoint["state_dict"])
+
+            # 9. Финальное тестирование на лучших весах
+            logger.info("Запуск тестирования на отложенной выборке...")
+            trainer.test(model=model_module, datamodule=datamodule)
+
+            # --- ИНТЕГРАЦИЯ С MLFLOW MODEL REGISTRY ---
+            # Поскольку все вычисления и тесты завершены, мы можем безопасно
+            # мутировать текущую модель (впекать LoRA), не боясь ничего сломать.
             import mlflow.transformers
             from mlflow.tracking import MlflowClient
 
-            logger.info("Извлекаем и регистрируем лучшие веса в MLflow...")
-
+            logger.info("Извлекаем и регистрируем модель в MLflow...")
             register_safe_globals()
 
-            # 1. Достаем лучшие веса
-            best_module = model_module.__class__.load_from_checkpoint(
-                best_ckpt_path, model=base_model, optimizer_cfg=cfg.model_module.optimizer_cfg
-            )
-            model_to_save = best_module.model
+            model_to_save = model_module.model
             best_score = trainer.checkpoint_callback.best_model_score
             best_score = float(best_score) if best_score is not None else None
 
-            # 2. Впекаем LoRA, если она использовалась
+            # Впекаем LoRA (операция in-place)
             if hasattr(model_to_save, "merge_and_unload"):
                 logger.info("Обнаружена LoRA. Впекаем адаптеры...")
                 model_to_save = model_to_save.merge_and_unload()

@@ -26,7 +26,7 @@ builder:
   peft_config: ${model.finetuning.peft_config}
   
   # Интеграция с MLflow
-  use_mlflow_registry: False
+  use_mlflow_registry: True
   mlflow_tracking_uri: ${logger.tracking_uri}
   mlflow_model_name: "FakeNewsDetector"
   mlflow_model_alias: "Production"

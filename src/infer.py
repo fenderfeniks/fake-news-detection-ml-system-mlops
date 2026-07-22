@@ -60,20 +60,20 @@ def infer(cfg: DictConfig) -> None:
                 logger.error(f"Не удалось загрузить чекпоинт. Ошибка: {e}")
                 raise e
 
-    model.eval()  # Переводим в режим инференса
+    model.eval()
 
-    # 1. Запрос
+    # Авто-определение устройства модели
+    device = next(model.parameters()).device
+    logger.info(f"Модель находится на устройстве: {device}")
+
     query = cfg.get("text", "Это пример тестовой новости для проверки пайплайна.")
     logger.info(f"Входящий запрос: {query}")
 
-    # 2. Инференс
     with torch.no_grad():
-        inputs = tokenizer(query, return_tensors="pt", truncation=True, padding=True)
-        # Получаем logits (выход из головы классификации)
+        # Явно переносим батч на device модели
+        inputs = tokenizer(query, return_tensors="pt", truncation=True, padding=True).to(device)
         outputs = model(**inputs)
         logits = outputs.logits
-
-        # Получаем вероятности (через softmax, если нужно)
         probabilities = torch.softmax(logits, dim=-1)
 
         # --- ИНТЕГРАЦИЯ БИЗНЕС-ЛОГИКИ ---

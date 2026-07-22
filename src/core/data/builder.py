@@ -207,6 +207,11 @@ class NLPDataModule(pl.LightningDataModule):
         logger.info(f"Данные успешно очищены и сохранены в {self.processed_dir}")
 
     def setup(self, stage=None):
+        # --- ПРЕДОХРАНИТЕЛЬ ОТ ДВОЙНОГО ВЫЗОВА ---
+        if stage in ("fit", None) and getattr(self, "train_dataset", None) is not None:
+            logger.info("DataModule.setup уже инициализирован, пропускаем повторный вызов.")
+            return
+
         processed_dataset = load_from_disk(self.processed_dir)
         balancing_cfg = self.data_cfg.get("balancing", {})
 
@@ -240,10 +245,8 @@ class NLPDataModule(pl.LightningDataModule):
             else:
                 self.class_weights = None
 
-            # ИСПРАВЛЕНО: val_dataset инициализируется всегда в fit
             self.val_dataset = processed_dataset["validation"]
 
-        # ДОБАВЛЕНО: отдельный блок для stage="validate"
         if stage == "validate":
             self.val_dataset = processed_dataset["validation"]
 
@@ -253,7 +256,6 @@ class NLPDataModule(pl.LightningDataModule):
         self.collator = instantiate(
             self.data_cfg.collator, tokenizer=self.tokenizer
         )
-
     def train_dataloader(self):
         return instantiate(
             self.data_cfg.dataloader,

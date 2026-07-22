@@ -23,7 +23,7 @@ model_module:
   optimizer_cfg:
     _target_: torch.optim.AdamW
     _partial_: true
-    lr: 1e-4
+    lr: 1e-3
     weight_decay: 0.01
 
 # 2. Настройка DataModule

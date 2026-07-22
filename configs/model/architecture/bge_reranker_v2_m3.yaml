@@ -1,0 +1,7 @@
+# @package model
+
+model_name: "BAAI/bge-reranker-v2-m3"
+
+builder:
+  auto_model_class: "transformers.AutoModelForSequenceClassification"
+  dtype: "float32"
