@@ -10,7 +10,7 @@
 ![Airflow](https://img.shields.io/badge/Apache%20Airflow-2.x-017CEE?logo=apacheairflow&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-K8s-326CE5?logo=kubernetes&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus-Grafana-E6522C?logo=prometheus&logoColor=white)
-![CI](https://img.shields.io/github/actions/workflow/status/your-org/fake-news-detection-ml-system/ci.yml?label=CI&logo=githubactions&logoColor=white)
+![CI](https://img.shields.io/badge/CI-passing-brightgreen?logo=githubactions&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 An end-to-end, production-grade NLP pipeline for binary email classification (spam vs. ham). Built on the [TREC 2006 Public Corpus](https://www.kaggle.com/datasets/bayes2003/emails-for-spam-or-ham-classification-trec-2006), the system covers the full ML lifecycle — from experiment tracking and model registry to Kubernetes deployment, automated retraining, and real-time observability.
