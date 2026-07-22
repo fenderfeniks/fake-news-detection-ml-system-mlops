@@ -8,6 +8,7 @@ pytest.importorskip — тест пропустится если transformers н
 import pytest
 import torch
 
+
 transformers = pytest.importorskip("transformers", reason="transformers not installed")
 from transformers import AutoTokenizer  # noqa: E402
 

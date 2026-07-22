@@ -68,7 +68,6 @@ def _make_pipeline_with_mock_model(logits: list[list[float]], threshold: float =
 class TestNLPPipelineCall:
     def test_single_string_input_returns_list(self):
         """Строка должна оборачиваться в список автоматически."""
-        from src.sdk.inference import NLPPipeline
 
         pipeline = _make_pipeline_with_mock_model([[0.1, 0.9]])
 
@@ -86,7 +85,6 @@ class TestNLPPipelineCall:
                 assert len(result) == 1
 
     def test_result_contains_required_keys(self):
-        from src.sdk.inference import NLPPipeline
 
         pipeline = _make_pipeline_with_mock_model([[0.2, 0.8]])
 
@@ -103,7 +101,6 @@ class TestNLPPipelineCall:
             assert "all_probabilities" in result[0]
 
     def test_all_probabilities_length_equals_num_classes(self):
-        from src.sdk.inference import NLPPipeline
 
         pipeline = _make_pipeline_with_mock_model([[0.3, 0.7]])
 
